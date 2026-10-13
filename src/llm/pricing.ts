@@ -3,6 +3,7 @@
 const PRICE_PER_MILLION_TOKENS: Record<string, { input: number; output: number }> = {
   "claude-opus-5-5": { input: 4, output: 20 },
   "claude-sonnet-5-5": { input: 2, output: 10 },
+  // Haiku costs 5x more for prompts over 100K tokens. Ours are a few hundred.
   "claude-haiku-5-5": { input: 0.1, output: 0.5 },
 };
 

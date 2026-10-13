@@ -8,7 +8,13 @@ import {
   type LlmProvider,
 } from "./provider";
 
-const DEFAULT_MODEL = "claude-opus-5-5";
+// Haiku is the cheapest current model: about 0.06 cents per draft, against
+// about 2.5 cents on Opus. Change it with ANTHROPIC_MODEL.
+const DEFAULT_MODEL = "claude-haiku-5-5";
+
+// Haiku has no server-side fallback, so the option is sent only to the
+// model families that support it.
+const supportsFallback = (model: string) => !model.startsWith("claude-haiku");
 
 /** The one SDK method this provider uses. Tests pass a fake with this shape. */
 type MessagesClient = Pick<Anthropic["beta"]["messages"], "create">;
@@ -41,8 +47,9 @@ export class AnthropicLlmProvider implements LlmProvider {
         messages: [{ role: "user", content: user }],
         // If the model declines on a safety check, the API re-runs the
         // request once on a fallback model inside the same call.
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
+        ...(supportsFallback(this.model)
+          ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
+          : {}),
       });
     } catch (error) {
       throw toLlmError(error);

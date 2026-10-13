@@ -22,12 +22,16 @@ type Create = ConstructorParameters<typeof AnthropicLlmProvider>[0] extends
     : never
   : never;
 
-function providerReturning(response: object, seen?: { params?: unknown }) {
+function providerReturning(
+  response: object,
+  seen?: { params?: unknown },
+  model = "claude-opus-5-5",
+) {
   const create = (async (params: unknown) => {
     if (seen) seen.params = params;
     return response;
   }) as unknown as Create;
-  return new AnthropicLlmProvider({ messages: { create }, model: "claude-opus-5-5" });
+  return new AnthropicLlmProvider({ messages: { create }, model });
 }
 
 function providerThrowing(error: unknown) {
@@ -82,6 +86,18 @@ describe("Anthropic provider (SDK replaced by a fake)", () => {
     expect(params.model).toBe("claude-opus-5-5");
     expect(params.system).toContain("Never invent");
     expect(params.messages[0].content).toContain("Carpenter");
+  });
+
+  it("asks for a server-side fallback on Opus, but not on Haiku", async () => {
+    const opus: { params?: unknown } = {};
+    await providerReturning(okResponse, opus).generateDraft(request);
+    expect(opus.params).toMatchObject({ fallbacks: "default" });
+
+    const haiku: { params?: unknown } = {};
+    await providerReturning(okResponse, haiku, "claude-haiku-5-5").generateDraft(request);
+    expect(haiku.params).toMatchObject({ model: "claude-haiku-5-5" });
+    expect(haiku.params).not.toHaveProperty("fallbacks");
+    expect(haiku.params).not.toHaveProperty("betas");
   });
 
   it("prices by the model that answered, which can be a fallback", async () => {
