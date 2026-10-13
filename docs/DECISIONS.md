@@ -497,3 +497,22 @@ through the real UI and opens them.
 - Only US Letter. A4 would be a one-line setting.
 - Right-to-left and Asian scripts are not handled. DejaVu Serif covers Latin,
   Greek and Cyrillic.
+
+## M7. CI and proof
+
+**CI runs the real tests against a real Postgres.** GitHub Actions starts a
+Postgres service container and runs lint, typecheck, all unit and integration
+tests, and a production build. No secrets are needed: the tests use fake
+Stripe keys, sign their own webhook payloads, and use the mock model.
+
+**Browser tests are not in CI.** They need the app and a worker running, and
+the Stripe ones need a real test key and `stripe listen`. They are run by
+hand, and their results are saved under `docs/evidence`. For a team project I
+would add the local Playwright tests to CI and keep the Stripe ones manual or
+nightly.
+
+**A fresh clone was tested.** Clone, install, copy the env file, migrate, run
+the tests, build, start the dev server. It took 34 seconds with Docker images
+and the pnpm cache already present.
+
+**The final report lists what is not proven.** See `docs/FINAL_REPORT.md`.
