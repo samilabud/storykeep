@@ -93,6 +93,10 @@ the test card 4242, saw the page unlock after Stripe called the deployed
 webhook, and got a draft as version 1 with no worker process running.
 Screenshot: [evidence/deployed-smoke.png](evidence/deployed-smoke.png).
 
+Run again on 2026-10-13 after M6: passed in 17.8s, now also downloading the
+PDF and the Word file from the live site. That proves the PDF fonts are
+shipped with the export function on Vercel.
+
 What this proves about production: the Neon database and its migrations, the
 login, the Stripe webhook endpoint with its signing secret, and the job queue
 driven by `after()`.
