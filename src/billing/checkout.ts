@@ -53,6 +53,10 @@ export async function startEulogyCheckout(
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
     customer,
+    // This sandbox has Stripe "Managed Payments" (Stripe as the seller, with
+    // tax handling) on by default. This project does not build tax, so each
+    // session turns it off.
+    managed_payments: { enabled: false },
     line_items: [
       {
         quantity: 1,

@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/auth/guards";
+import { startEulogyCheckout } from "@/billing/checkout";
 import { saveAnswer } from "@/questionnaire/data";
 import { isQuestionKey } from "@/questionnaire/questions";
 import { requestDraft } from "@/stories/drafts";
@@ -69,5 +70,18 @@ export async function requestDraftAction(storyId: string) {
   const result = await requestDraft(userId, storyId);
   if (!result) notFound();
 
+  // Go to the clean URL. This drops ?checkout=success, which only matters
+  // while the page waits for the payment webhook.
+  redirect(`/stories/${storyId}`);
+}
+
+export async function startEulogyCheckoutAction(storyId: string) {
+  const userId = await requireUser();
+  const result = await startEulogyCheckout(userId, storyId);
+  if (!result) notFound();
+
+  // Send the browser to Stripe's hosted payment page. Card details never
+  // touch our server.
+  if (result.status === "redirect") redirect(result.url);
   refresh();
 }

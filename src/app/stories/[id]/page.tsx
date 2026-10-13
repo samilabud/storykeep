@@ -1,35 +1,44 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { requireStoryOwner } from "@/auth/guards";
+import { getEulogyPayment } from "@/billing/orders";
 import { getCurrentAnswers } from "@/questionnaire/data";
 import { nextQuestionKey, QUESTIONS } from "@/questionnaire/questions";
 import { draftFailureMessage, getLatestDraftJob } from "@/stories/drafts";
 import { listVersions } from "@/stories/versions";
-import { requestDraftAction, saveStoryTextAction } from "./actions";
+import {
+  requestDraftAction,
+  saveStoryTextAction,
+  startEulogyCheckoutAction,
+} from "./actions";
 import { AutoRefresh } from "./auto-refresh";
 
 const SOURCE_LABEL = { llm_draft: "AI draft", user_edit: "Your edit" } as const;
 
-export default function StoryPage({ params }: PageProps<"/stories/[id]">) {
+type Props = PageProps<"/stories/[id]">;
+
+export default function StoryPage({ params, searchParams }: Props) {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-10">
       <Link href="/stories" className="text-sm underline">
         ← My stories
       </Link>
       <Suspense fallback={<p className="mt-6 text-sm text-zinc-500">Loading…</p>}>
-        <StoryDetail params={params} />
+        <StoryDetail params={params} searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
-async function StoryDetail({ params }: { params: Promise<{ id: string }> }) {
+async function StoryDetail({ params, searchParams }: Props) {
   const { id } = await params;
+  const { checkout } = await searchParams;
   const story = await requireStoryOwner(id);
-  const [answers, versions, draftJob] = await Promise.all([
+  const [answers, versions, draftJob, eulogyPayment] = await Promise.all([
     getCurrentAnswers(story.userId, story.id),
     listVersions(story.userId, story.id),
     getLatestDraftJob(story.userId, story.id),
+    story.kind === "eulogy" ? getEulogyPayment(story.userId, story.id) : null,
   ]);
 
   const handled = answers?.size ?? 0;
@@ -41,6 +50,14 @@ async function StoryDetail({ params }: { params: Promise<{ id: string }> }) {
     draftJob?.status === "queued" || draftJob?.status === "running";
   const draftError = draftJob ? draftFailureMessage(draftJob) : null;
   const hasDraft = versions?.some((v) => v.source === "llm_draft") ?? false;
+
+  // A eulogy needs a paid, unused order. A failed job may be retried for
+  // free, because that payment has not produced a draft yet.
+  const needsPayment =
+    story.kind === "eulogy" && eulogyPayment !== "paid_unused" && !draftError;
+  // The browser came back from Stripe, but the webhook has not arrived yet.
+  // Access comes from the webhook, so wait for it instead of trusting the URL.
+  const confirmingPayment = needsPayment && checkout === "success" && !drafting;
 
   return (
     <>
@@ -81,7 +98,39 @@ async function StoryDetail({ params }: { params: Promise<{ id: string }> }) {
                 {draftError}
               </p>
             )}
-            {answered === 0 ? (
+            {checkout === "cancelled" && needsPayment && (
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                Payment cancelled. You were not charged.
+              </p>
+            )}
+            {eulogyPayment === "paid_unused" && (
+              <p className="mt-1 text-sm text-green-700 dark:text-green-500">
+                Payment received. Your eulogy draft is unlocked.
+              </p>
+            )}
+            {confirmingPayment ? (
+              <p role="status" className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                Confirming your payment…
+                <AutoRefresh />
+              </p>
+            ) : needsPayment ? (
+              <form
+                action={startEulogyCheckoutAction.bind(null, story.id)}
+                className="mt-3"
+              >
+                <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
+                  {eulogyPayment === "paid_used"
+                    ? "Your paid draft has been written. Another draft is a new purchase."
+                    : "One eulogy draft costs $9, paid once."}
+                </p>
+                <button
+                  type="submit"
+                  className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                >
+                  Pay $9 with Stripe
+                </button>
+              </form>
+            ) : answered === 0 ? (
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 Answer at least one question to get a draft.
               </p>

@@ -10,8 +10,13 @@ export async function register(page: Page, email: string) {
   await expect(page.getByRole("heading", { name: "My stories" })).toBeVisible();
 }
 
-export async function createStory(page: Page, title: string) {
+export async function createStory(
+  page: Page,
+  title: string,
+  kind: "Life Story" | "Eulogy" = "Life Story",
+) {
   await page.getByLabel("Title").fill(title);
+  await page.getByLabel("Kind").selectOption({ label: kind });
   await page.getByRole("button", { name: "Create story" }).click();
   await expect(page.getByRole("heading", { name: title })).toBeVisible();
 }

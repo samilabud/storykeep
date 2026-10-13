@@ -1,6 +1,7 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { createStory, register } from "./helpers";
+import { startMockWorker } from "./worker";
 
 const run = Date.now();
 let worker: ChildProcess;
@@ -8,16 +9,7 @@ let worker: ChildProcess;
 // Start a real worker process with the mock model. The mock waits 2 seconds
 // per draft, so there is time to close the page while the job runs.
 test.beforeAll(async () => {
-  worker = spawn("pnpm", ["worker"], {
-    env: { ...process.env, LLM_PROVIDER: "mock", MOCK_LLM_DELAY_MS: "2000" },
-    stdio: ["ignore", "pipe", "inherit"],
-  });
-  await new Promise<void>((resolve, reject) => {
-    worker.stdout!.on("data", (chunk: Buffer) => {
-      if (chunk.toString().includes("[worker] started")) resolve();
-    });
-    worker.on("exit", () => reject(new Error("worker exited before it started")));
-  });
+  worker = await startMockWorker(2000);
 });
 
 test.afterAll(() => {
