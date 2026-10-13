@@ -1,0 +1,168 @@
+$ pnpm test --reporter=verbose
+
+> storykeep@0.1.0 test /Users/samilabud/code/storykeep
+> vitest run --reporter=verbose
+
+
+ RUN  v5.0.4 /Users/samilabud/code/storykeep
+
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > happy path > the request only queues a job, and the worker writes the draft later 83ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > happy path > records token usage and cost for the call 42ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > no duplicate jobs > two clicks give one job 30ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > no duplicate jobs > five requests at the same moment give one job 36ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > no duplicate jobs > two workers never claim the same job 24ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a job that fails once and is retried creates exactly one version 34ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a worker that dies after saving the draft does not create a second one 39ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > the same handler run twice at once still saves one draft 51ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a second draft after the first is a new job and a new version 38ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a user edit made while the job waits is kept in the history 26ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > failures > a failing LLM is retried, then marked failed with a clear message 38ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > failures > an error that cannot be fixed by retrying fails at once 34ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > failures > 'try again' after a failure reuses the same job row 36ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > daily cost cap > blocks a draft once the user has spent the daily budget 54ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > daily cost cap > resets the next day and does not count other users 38ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > guards > does not queue a draft when no question is answered 15ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > guards > does not let another user request or see a draft job 17ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > blocks a eulogy draft before payment 89ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > allows exactly one draft after the paid webhook 59ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > does not unlock when the session completed but is not paid yet 13ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > turns the pending order from checkout into a paid one 12ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > five draft requests at once use the single payment once 31ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > 'try again' after a failed job does not need a second payment 39ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > a full refund removes the unused unlock 18ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > does not gate a life story with the one-time payment 20ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > the same checkout.session.completed twice gives one order and one unlock 45ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > a replay after the unlock was used does not give a second unlock 33ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > the same event delivered five times at once is processed once 16ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > a different event for the same session still gives one order 20ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > a handler error rolls the event back, so Stripe's retry can succeed 19ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > stores event types it does not handle and changes nothing else 16ms
+stderr | tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > answers 500 when processing fails, so Stripe retries
+[stripe] failed to process evt_test_1791914678718_57 (checkout.session.completed) DrizzleQueryError: Failed query: insert into "orders" ("id", "user_id", "story_id", "stripe_checkout_session_id", "stripe_payment_intent_id", "amount_cents", "currency", "status", "consumed_at", "created_at") values (default, $1, $2, $3, $4, $5, $6, $7, default, default) on conflict ("stripe_checkout_session_id") do update set "stripe_payment_intent_id" = $8, "status" = $9
+params: 00000000-0000-4000-8000-000000000000,58e93e5b-b150-4f8b-91bc-8375655dcea4,cs_test_1791914678718_55,pi_test_1791914678718_56,900,usd,paid,pi_test_1791914678718_56,paid
+    at NodePgPreparedQuery.queryWithCache (file:///Users/samilabud/code/storykeep/node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/pg-core/session.js:41:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at onCheckoutSessionPaid (/Users/samilabud/code/storykeep/src/billing/webhook-handlers.ts:40:3)
+    ... 4 lines matching cause stack trace ...
+    at /Users/samilabud/code/storykeep/tests/integration/stripe-one-time.test.ts:327:24
+    at async file:///Users/samilabud/code/storykeep/node_modules/.pnpm/vitest@5.0.4_@types+node@20.19.43_vite@8.3.4_@types+node@20.19.43_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_/node_modules/vitest/dist/chunks/run.Cm2sd7-x.js:2794:20 {
+  query: 'insert into "orders" ("id", "user_id", "story_id", "stripe_checkout_session_id", "stripe_payment_intent_id", "amount_cents", "currency", "status", "consumed_at", "created_at") values (default, $1, $2, $3, $4, $5, $6, $7, default, default) on conflict ("stripe_checkout_session_id") do update set "stripe_payment_intent_id" = $8, "status" = $9',
+  params: [
+    '00000000-0000-4000-8000-000000000000',
+    '58e93e5b-b150-4f8b-91bc-8375655dcea4',
+    'cs_test_1791914678718_55',
+    'pi_test_1791914678718_56',
+    900,
+    'usd',
+    'paid',
+    'pi_test_1791914678718_56',
+    'paid'
+  ],
+  cause: error: insert or update on table "orders" violates foreign key constraint "orders_user_id_users_id_fk"
+      at /Users/samilabud/code/storykeep/node_modules/.pnpm/pg@8.23.1/node_modules/pg/lib/client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///Users/samilabud/code/storykeep/node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/node-postgres/session.js:113:20
+      at async NodePgPreparedQuery.queryWithCache (file:///Users/samilabud/code/storykeep/node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/pg-core/session.js:39:16)
+      at onCheckoutSessionPaid (/Users/samilabud/code/storykeep/src/billing/webhook-handlers.ts:40:3)
+      at handleStripeEvent (/Users/samilabud/code/storykeep/src/billing/webhook-handlers.ts:14:7)
+      at /Users/samilabud/code/storykeep/src/billing/events.ts:41:5
+      at async NodePgSession.transaction (file:///Users/samilabud/code/storykeep/node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+      at POST (/Users/samilabud/code/storykeep/src/app/api/stripe/webhook/route.ts:32:20)
+      at /Users/samilabud/code/storykeep/tests/integration/stripe-one-time.test.ts:327:24 {
+    length: 295,
+    severity: 'ERROR',
+    code: '23503',
+    detail: 'Key (user_id)=(00000000-0000-4000-8000-000000000000) is not present in table "users".',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'orders',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'orders_user_id_users_id_fk',
+    file: 'ri_triggers.c',
+    line: '2599',
+    routine: 'ri_ReportViolation'
+  }
+}
+
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > accepts a correctly signed event and marks the order paid 21ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > answers 200 'duplicate' when Stripe sends the same event again 17ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > rejects a request with no signature header 14ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > rejects an event signed with the wrong secret 11ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > rejects a body that was changed after signing 11ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > rejects a signature with an old timestamp (replay of a captured request) 12ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > answers 500 when processing fails, so Stripe retries 19ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > saves a first answer as revision 1 42ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > keeps the old answer when an answer is edited 17ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > does not add a revision when the same answer is saved again 14ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > records a skip, and lets the user answer it later 14ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > treats an empty answer as a skip 11ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > resumes at the first question that is not answered or skipped 19ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > reports no next question when all are handled 10ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > gives each concurrent edit of one answer its own revision 27ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > rejects a question key that does not exist 10ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > does not let another user save or read answers 14ms
+ ✓ tests/integration/story-versions.test.ts > story version history > numbers versions 1, 2, 3 and points the story at the newest 59ms
+ ✓ tests/integration/story-versions.test.ts > story version history > keeps every earlier version readable 19ms
+ ✓ tests/integration/story-versions.test.ts > story version history > keeps LLM drafts and user edits in the same history 18ms
+ ✓ tests/integration/story-versions.test.ts > story version history > does not create a version when the text did not change 17ms
+ ✓ tests/integration/story-versions.test.ts > story version history > restores an old version as a new version 22ms
+ ✓ tests/integration/story-versions.test.ts > story version history > gives concurrent saves different version numbers 35ms
+ ✓ tests/integration/story-versions.test.ts > story version history > does not let another user add, list, read or restore versions 16ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > lets the owner read their own story 40ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > does not let user A read user B's story 9ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > does not list user B's stories for user A 12ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > treats a malformed id as not found instead of crashing 9ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > returns 200 with the story for its owner 21ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > returns 404 when user A asks for user B's story 10ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > gives the same 404 for a story that does not exist 9ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > returns 401 when nobody is signed in 8ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > returns the text, the token counts and the cost 1ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > sends the answers and the no-invention rule to the model 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > prices by the model that answered, which can be a fallback 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > treats a refusal as final, not retryable 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > treats a draft cut off by the length limit as final 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies rate limit (429) as retryable=Error: 429 slow down 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies server error (500) as retryable=Error: 500 oops 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies overloaded (529) as retryable=Error: 529 overloaded 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies network failure as retryable=Error: socket hang up 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies bad API key (401) as retryable=Error: 401 bad key 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies bad request (400) as retryable=Error: 400 bad 0ms
+ ✓ tests/unit/llm.test.ts > pricing > rounds up to whole cents 0ms
+ ✓ tests/unit/llm.test.ts > pricing > charges an unknown model at the highest rate 0ms
+ ✓ tests/unit/llm.test.ts > prompt > asks for the right kind of text 0ms
+ ✓ tests/unit/llm.test.ts > backoff > doubles after each failed try and stops growing at 5 minutes 0ms
+
+ Test Files  6 passed (6)
+      Tests  78 passed (78)
+   Start at  14:04:36
+   Duration  4.76s (import 55%, tests 43%, transform 2%)
+
+
+
+$ pnpm test:e2e
+
+> storykeep@0.1.0 test:e2e /Users/samilabud/code/storykeep
+> playwright test
+
+
+Running 6 tests using 4 workers
+
+  -  1 tests/e2e/payment.spec.ts:22:5 › one-time payment: pay $9 on Stripe Checkout, webhook unlocks one eulogy draft
+  ✓  4 tests/e2e/story-access.spec.ts:8:5 › a user cannot open another user's story (4.5s)
+  ✓  5 tests/e2e/story-access.spec.ts:44:5 › login rejects a wrong password (1.2s)
+  ✓  3 tests/e2e/questionnaire.spec.ts:6:5 › questionnaire: save, skip, resume after signing in again, edit with history (7.0s)
+  ✓  2 tests/e2e/draft.spec.ts:19:5 › an AI draft is written in the background after the page is closed (9.5s)
+  ✓  6 tests/e2e/questionnaire.spec.ts:69:5 › story text: each save is a new version, and an old one can be restored (4.0s)
+
+  1 skipped
+  5 passed (11.9s)
+
+$ pnpm test:e2e:stripe   (run at 2026-10-13 14:03 local, with `pnpm stripe:listen` running)
+  ✓  1 tests/e2e/payment.spec.ts:22:5 › one-time payment: pay $9 on Stripe Checkout, webhook unlocks one eulogy draft (11.6s)
+  1 passed (12.8s)

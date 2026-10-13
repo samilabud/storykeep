@@ -193,3 +193,85 @@ answered.
 - No streaming of the draft into the page. The page polls every 2 seconds.
 - No job dashboard. `select * from jobs` is the dashboard.
 - No dead-letter queue. A failed job stays in the table with its error.
+
+## M4. Stripe one-time payment
+
+**Stripe-hosted Checkout.** The browser is sent to Stripe's page. Card numbers
+never touch my server, so I have no card data to protect.
+
+**The price is set on the server.** The browser sends only "I want to pay for
+story X". The amount (900 cents) is a constant in `src/billing/stripe.ts`.
+A user cannot change the price by editing the page.
+
+**Access comes from the webhook, never from the redirect.** After paying, the
+browser returns to `?checkout=success`. Anyone can type that URL. So the page
+unlocks nothing from it. It shows "Confirming your payment…" and waits until
+the webhook has marked the order as paid in my database.
+
+**Signature verification on the raw body.** The webhook URL is public. Stripe
+signs each request with a shared secret (an HMAC of the timestamp and the
+exact bytes). The route reads the body as raw text and checks the signature
+before doing anything. A changed body, a wrong secret or an old timestamp is
+rejected with 400.
+
+**How I prevent double processing. Three layers:**
+1. `stripe_events.id` is Stripe's event id and the PRIMARY KEY. The handler
+   first inserts the event with `ON CONFLICT DO NOTHING`. No row inserted
+   means "seen before", and it stops.
+2. The insert and the changes run in ONE transaction. If the changes fail,
+   the insert is rolled back, so Stripe's retry gets a second chance. Without
+   this, a crash after the insert would lose the event forever.
+3. `orders.stripe_checkout_session_id` is UNIQUE and the order is written as
+   an upsert. Even a different event about the same session gives one order.
+
+**Why Stripe sends duplicates at all.** Stripe promises "at least once". It
+retries when my server answers slowly or with an error, and a human can press
+"resend" in the dashboard. A webhook handler that is not idempotent will
+sooner or later give something away twice.
+
+**200 for a duplicate, 500 for a failure.** A duplicate is success from
+Stripe's point of view: stop sending. A real failure must be a 5xx so Stripe
+retries later.
+
+**`payment_status === "paid"`, not just "completed".** `checkout.session.completed`
+means the customer finished the form. With slow payment methods the money can
+still be on its way. The order is unlocked only when it is paid.
+
+**One paid order buys one generation.** The order is marked used
+(`consumed_at`) in the same transaction that creates the job, with the order
+row locked. Five requests at once start one job. If the job later fails,
+"Try again" is free, because that payment has not produced a draft yet.
+
+**How I prevent double charges.**
+- No second checkout is started while a paid, unused order exists.
+- The Stripe customer is created with an idempotency key (`customer:<userId>`),
+  so two requests create one customer.
+- Known gap: two fast clicks on "Pay" can create two Checkout Sessions. The
+  user would have to pay on both pages to be charged twice. Reusing the open
+  session would close this gap.
+
+**Tests never call Stripe.** They build events and sign them with Stripe's own
+test helper, so real signature verification runs offline. The real Stripe
+round trip is a separate Playwright test (`pnpm test:e2e:stripe`) that needs
+`pnpm stripe:listen`.
+
+**Test keys only, enforced in code.** `getStripe()` throws if the key does not
+start with `sk_test_`.
+
+### What broke first
+
+- **Stripe "Managed Payments" was on by default in the new sandbox.** Creating
+  a Checkout Session failed with "the product tax code is missing". Fix: pass
+  `managed_payments: { enabled: false }` on the session. This project does
+  not build tax.
+- **"Confirming your payment…" never went away after the draft was written.**
+  The page still had `?checkout=success` in the URL while the order was
+  already used. Fix: the draft action redirects to the clean URL. The real
+  payment test found this. The mocked tests could not.
+
+### Cut or postponed
+
+- Life Story is not gated yet. Its subscription comes in M5.
+- Download gating comes with the export in M6.
+- Refunds: a full refund marks the order `refunded`. Partial refunds are ignored.
+- No receipt email. Stripe can send its own.

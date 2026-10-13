@@ -1,0 +1,16 @@
+# Forged webhook over real HTTP, 2026-10-13T18:04:23Z
+
+$ curl -X POST localhost:3100/api/stripe/webhook   (no signature header)
+{"error":"Missing signature"}
+HTTP 400
+
+$ curl -X POST localhost:3100/api/stripe/webhook -H "stripe-signature: t=1,v1=deadbeef"
+{"error":"Invalid signature"}
+HTTP 400
+
+## The forged event was not stored
+ forged_rows 
+-------------
+           0
+(1 row)
+

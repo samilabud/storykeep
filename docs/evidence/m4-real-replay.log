@@ -1,0 +1,49 @@
+# Replay of a REAL Stripe test-mode event, 2026-10-13T18:04:08Z
+# event: evt_1UQA33L750erOWiztGznGYYI
+
+## Before the replay
+              id              |            type            |          received_at          | processed 
+------------------------------+----------------------------+-------------------------------+-----------
+ evt_1UQA33L750erOWiztGznGYYI | checkout.session.completed | 2026-10-13 18:03:37.452324+00 | t
+(1 row)
+
+ status | amount_cents | used 
+--------+--------------+------
+ paid   |          900 | t
+(1 row)
+
+ events_total | orders_total | orders_paid 
+--------------+--------------+-------------
+           13 |            2 |           2
+(1 row)
+
+## Replay it twice with the Stripe CLI
+$ stripe events resend evt_1UQA33L750erOWiztGznGYYI
+  "id": "evt_1UQA33L750erOWiztGznGYYI",
+      "id": "cs_test_a1lfZQNtafE2kj4kMS8oS99CihRsKipiLuJ65oGrfuyybizV2Tm5ncwsnF",
+$ stripe events resend evt_1UQA33L750erOWiztGznGYYI
+  "id": "evt_1UQA33L750erOWiztGznGYYI",
+      "id": "cs_test_a1lfZQNtafE2kj4kMS8oS99CihRsKipiLuJ65oGrfuyybizV2Tm5ncwsnF",
+
+## After the replay: same rows, same counts
+              id              |            type            |          received_at          | processed 
+------------------------------+----------------------------+-------------------------------+-----------
+ evt_1UQA33L750erOWiztGznGYYI | checkout.session.completed | 2026-10-13 18:03:37.452324+00 | t
+(1 row)
+
+ status | amount_cents | used 
+--------+--------------+------
+ paid   |          900 | t
+(1 row)
+
+ events_total | orders_total | orders_paid 
+--------------+--------------+-------------
+           13 |            2 |           2
+(1 row)
+
+
+## What `stripe listen` showed during the replay
+2026-10-13 14:04:09   --> checkout.session.completed [evt_1UQA33L750erOWiztGznGYYI]
+2026-10-13 14:04:09  <--  [200] POST http://localhost:3100/api/stripe/webhook [evt_1UQA33L750erOWiztGznGYYI]
+2026-10-13 14:04:12   --> checkout.session.completed [evt_1UQA33L750erOWiztGznGYYI]
+2026-10-13 14:04:12  <--  [200] POST http://localhost:3100/api/stripe/webhook [evt_1UQA33L750erOWiztGznGYYI]
