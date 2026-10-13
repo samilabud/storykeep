@@ -9,8 +9,8 @@ a usage table.
 
 | Test | File | What it proves |
 |---|---|---|
-| Vitest, 16 tests | `tests/integration/draft-jobs.test.ts` | See the list below. Real Postgres, mock model. |
-| Vitest, 16 tests | `tests/unit/llm.test.ts` | Anthropic provider with the SDK replaced by a fake: text, tokens and cost are read correctly, 429 / 5xx / network errors are retryable, 400 / 401 / refusal / cut-off are not. Pricing rounds up. Backoff doubles. |
+| Vitest, 17 tests | `tests/integration/draft-jobs.test.ts` | See the list below. Real Postgres, mock model. |
+| Vitest, 15 tests | `tests/unit/llm.test.ts` | Anthropic provider with the SDK replaced by a fake: text, tokens and cost are read correctly, 429 / 5xx / network errors are retryable, 400 / 401 / refusal / cut-off are not. Pricing rounds up. Backoff doubles. |
 | Playwright, 1 test | `tests/e2e/draft.spec.ts` | A real worker process. The browser asks for a draft, the page is closed while the job runs, no tab is open for 5 seconds, and on return the draft is version 1. |
 
 The two tests your prompt asked for by name:
