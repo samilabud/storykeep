@@ -58,11 +58,11 @@ With the checks back, all 57 pass.
 - [m3-draft-in-progress.png](m3-draft-in-progress.png): "Writing your draft…" just before the page is closed.
 - [m3-draft-ready.png](m3-draft-ready.png): after coming back, version 1 is an AI draft.
 
-## Not proven
+## Real API
 
-The real Anthropic API was not called. See "Not proven yet" in
-[DECISIONS.md](../DECISIONS.md). To check it: put `ANTHROPIC_API_KEY` in
-`.env.local` and run `pnpm llm:smoke`.
+One real call was made with `pnpm llm:smoke`. See
+[m3-real-api-smoke.md](m3-real-api-smoke.md). The job and worker tests above
+use the mock model.
 
 ## How to repeat it
 

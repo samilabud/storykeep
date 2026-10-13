@@ -180,12 +180,13 @@ It uses the API's server-side fallback, so a safety decline is retried once on
 another model inside the same call. Cost is priced by the model that really
 answered.
 
-### Not proven yet
+### Proven with the real API
 
-- **The real Anthropic API has not been called.** The Anthropic provider is
-  tested with the SDK replaced by a fake: text, tokens, cost and the
-  retryable/non-retryable split. `pnpm llm:smoke` makes one real call. It
-  needs a key and costs a few cents, so it is left for me to run.
+- One real call with `pnpm llm:smoke` on 2026-10-13: `claude-opus-5-5`,
+  299 input tokens, 1206 output tokens, 3 cents. See
+  `docs/evidence/m3-real-api-smoke.md`.
+- Still mock only: the full path from the button through the worker. The
+  smoke script calls the provider directly.
 
 ### Cut or postponed
 
