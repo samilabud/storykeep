@@ -16,7 +16,12 @@ export default defineConfig({
   test: {
     include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
     globalSetup: ["tests/global-setup.ts"],
-    env: { DATABASE_URL: testDatabaseUrl },
+    env: {
+      DATABASE_URL: testDatabaseUrl,
+      // Fake values. Tests verify signatures offline and never call Stripe.
+      STRIPE_SECRET_KEY: "sk_test_fake_key_for_unit_tests",
+      STRIPE_WEBHOOK_SECRET: "whsec_fake_secret_for_unit_tests",
+    },
     // All test files share one database, so run them one at a time.
     fileParallelism: false,
   },

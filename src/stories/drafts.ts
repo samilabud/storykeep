@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { jobs, questionnaireAnswers, storyVersions } from "@/db/schema";
+import { consumeOrder, lockUnusedPaidOrder } from "@/billing/orders";
 import { GENERATE_DRAFT } from "@/jobs/handlers/generate-draft";
 import type { Job } from "@/jobs/queue";
 import { getStoryForUser, lockStoryForUser } from "./data";
@@ -8,7 +9,8 @@ import { getStoryForUser, lockStoryForUser } from "./data";
 export type RequestDraftResult =
   | { status: "queued"; job: Job }
   | { status: "already_running"; job: Job }
-  | { status: "no_answers" };
+  | { status: "no_answers" }
+  | { status: "payment_required" };
 
 const forStory = (storyId: string) =>
   and(
@@ -64,21 +66,9 @@ export async function requestDraft(
       .limit(1);
     const idempotencyKey = `draft:${storyId}:v${(latest?.versionNo ?? 0) + 1}`;
 
-    const [inserted] = await tx
-      .insert(jobs)
-      .values({
-        type: GENERATE_DRAFT,
-        payload: { storyId, userId },
-        idempotencyKey,
-        runAt: now,
-      })
-      .onConflictDoNothing({ target: jobs.idempotencyKey })
-      .returning();
-    if (inserted) return { status: "queued", job: inserted };
-
-    // The key exists and the job is not active, so it failed earlier.
-    // "Try again" reuses that row instead of adding a second job.
-    const [requeued] = await tx
+    // A job with this key that is not active failed earlier. "Try again"
+    // reuses that row: no second job, and no second payment.
+    const [failed] = await tx
       .update(jobs)
       .set({
         status: "queued",
@@ -87,9 +77,31 @@ export async function requestDraft(
         lockedAt: null,
         lastError: null,
       })
-      .where(eq(jobs.idempotencyKey, idempotencyKey))
+      .where(
+        and(eq(jobs.idempotencyKey, idempotencyKey), eq(jobs.status, "failed")),
+      )
       .returning();
-    return { status: "queued", job: requeued };
+    if (failed) return { status: "queued", job: failed };
+
+    // Payment gate. One paid order buys one eulogy generation. The order is
+    // marked used in the same transaction that creates the job, so one
+    // payment can never start two generations.
+    if (story.kind === "eulogy") {
+      const order = await lockUnusedPaidOrder(tx, userId, storyId);
+      if (!order) return { status: "payment_required" };
+      await consumeOrder(tx, order.id, now);
+    }
+
+    const [job] = await tx
+      .insert(jobs)
+      .values({
+        type: GENERATE_DRAFT,
+        payload: { storyId, userId },
+        idempotencyKey,
+        runAt: now,
+      })
+      .returning();
+    return { status: "queued", job };
   });
 }
 
