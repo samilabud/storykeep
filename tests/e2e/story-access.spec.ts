@@ -1,17 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { PASSWORD, register } from "./helpers";
 
 // Real browser, real login, real database. Emails are unique per run so the
 // test can be repeated against the dev database.
 const run = Date.now();
-const PASSWORD = "correct-horse-battery";
-
-async function register(page: Page, email: string) {
-  await page.goto("/register");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByRole("heading", { name: "My stories" })).toBeVisible();
-}
 
 test("a user cannot open another user's story", async ({ browser }) => {
   // Alice signs up and creates a story.
