@@ -1,0 +1,27 @@
+$ pnpm test
+
+> storykeep@0.1.0 test /Users/samilabud/code/storykeep
+> vitest run
+
+
+ RUN  v5.0.4 /Users/samilabud/code/storykeep
+
+
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  22:25:09
+   Duration  906ms (import 62%, tests 33%, transform 5%)
+
+
+$ pnpm test:e2e
+
+> storykeep@0.1.0 test:e2e /Users/samilabud/code/storykeep
+> playwright test
+
+
+Running 2 tests using 1 worker
+
+  ✓  1 tests/e2e/story-access.spec.ts:16:5 › a user cannot open another user's story (2.9s)
+  ✓  2 tests/e2e/story-access.spec.ts:52:5 › login rejects a wrong password (1.2s)
+
+  2 passed (4.9s)

@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StoryKeep
 
-## Getting Started
+Answer a short questionnaire about someone's life, get an LLM-drafted story,
+edit it, and download it as PDF or DOCX. Paid with Stripe (test mode only).
 
-First, run the development server:
+This is a learning project. Status: **M1 of 7 done** (foundation, auth,
+per-user access control). The full README comes in M7.
+
+## Setup
+
+You need Docker, Node 20+ and pnpm.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local
+# set AUTH_SECRET in .env.local:  openssl rand -base64 32
+docker compose up -d          # Postgres on 5440, test Postgres on 5441, Mailpit on 8025
+pnpm db:migrate
+pnpm dev                      # http://localhost:3100
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Commands
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Run the app on port 3100 |
+| `pnpm test` | Vitest against the test database |
+| `pnpm test:e2e` | Playwright browser tests |
+| `pnpm typecheck` / `pnpm lint` | Static checks |
+| `pnpm db:generate` / `pnpm db:migrate` | Create / apply migrations |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Docs
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [docs/DECISIONS.md](docs/DECISIONS.md): what was chosen and why
+- [docs/evidence/](docs/evidence/): proof for each claim
