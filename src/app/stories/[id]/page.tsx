@@ -3,8 +3,10 @@ import { Suspense } from "react";
 import { requireStoryOwner } from "@/auth/guards";
 import { getCurrentAnswers } from "@/questionnaire/data";
 import { nextQuestionKey, QUESTIONS } from "@/questionnaire/questions";
+import { draftFailureMessage, getLatestDraftJob } from "@/stories/drafts";
 import { listVersions } from "@/stories/versions";
-import { saveStoryTextAction } from "./actions";
+import { requestDraftAction, saveStoryTextAction } from "./actions";
+import { AutoRefresh } from "./auto-refresh";
 
 const SOURCE_LABEL = { llm_draft: "AI draft", user_edit: "Your edit" } as const;
 
@@ -24,14 +26,21 @@ export default function StoryPage({ params }: PageProps<"/stories/[id]">) {
 async function StoryDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const story = await requireStoryOwner(id);
-  const [answers, versions] = await Promise.all([
+  const [answers, versions, draftJob] = await Promise.all([
     getCurrentAnswers(story.userId, story.id),
     listVersions(story.userId, story.id),
+    getLatestDraftJob(story.userId, story.id),
   ]);
 
   const handled = answers?.size ?? 0;
   const next = nextQuestionKey(answers?.keys() ?? []);
   const current = versions?.find((v) => v.id === story.currentVersionId);
+
+  const answered = [...(answers?.values() ?? [])].filter((a) => !a.skipped).length;
+  const drafting =
+    draftJob?.status === "queued" || draftJob?.status === "running";
+  const draftError = draftJob ? draftFailureMessage(draftJob) : null;
+  const hasDraft = versions?.some((v) => v.source === "llm_draft") ?? false;
 
   return (
     <>
@@ -57,6 +66,43 @@ async function StoryDetail({ params }: { params: Promise<{ id: string }> }) {
         </Link>
       </section>
 
+      <section className="mt-8 rounded border border-zinc-200 p-4 dark:border-zinc-800">
+        <h2 className="text-lg font-medium">AI draft</h2>
+        {drafting ? (
+          <p role="status" className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Writing your draft… This runs in the background. You can close
+            this page and come back later.
+            <AutoRefresh />
+          </p>
+        ) : (
+          <>
+            {draftError && (
+              <p role="alert" className="mt-1 text-sm text-red-600">
+                {draftError}
+              </p>
+            )}
+            {answered === 0 ? (
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                Answer at least one question to get a draft.
+              </p>
+            ) : (
+              <form action={requestDraftAction.bind(null, story.id)} className="mt-3">
+                <button
+                  type="submit"
+                  className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                >
+                  {draftError
+                    ? "Try again"
+                    : hasDraft
+                      ? "Write a new draft"
+                      : "Write a draft from my answers"}
+                </button>
+              </form>
+            )}
+          </>
+        )}
+      </section>
+
       <section className="mt-8">
         <h2 className="text-lg font-medium">Story text</h2>
         <form
@@ -72,7 +118,7 @@ async function StoryDetail({ params }: { params: Promise<{ id: string }> }) {
             // current, so it shows the saved text.
             key={current?.id ?? "empty"}
             defaultValue={current?.content ?? ""}
-            placeholder="Write the story here. An AI draft arrives in the next milestone."
+            placeholder="Write the story here, or ask for an AI draft above."
             className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
           />
           <button

@@ -11,7 +11,9 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "worker": "tsx worker.ts",
+    "llm:smoke": "tsx scripts/llm-smoke.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

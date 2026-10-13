@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/auth/guards";
 import { saveAnswer } from "@/questionnaire/data";
 import { isQuestionKey } from "@/questionnaire/questions";
+import { requestDraft } from "@/stories/drafts";
 import { restoreVersion, saveVersion } from "@/stories/versions";
 
 // Each action reads the user from the session and passes it to the data
@@ -60,4 +61,13 @@ export async function restoreVersionAction(storyId: string, versionNo: number) {
   if (!result) notFound();
 
   redirect(`/stories/${storyId}`);
+}
+
+export async function requestDraftAction(storyId: string) {
+  const userId = await requireUser();
+  // This returns as soon as the job row is saved. The worker writes the draft.
+  const result = await requestDraft(userId, storyId);
+  if (!result) notFound();
+
+  refresh();
 }
