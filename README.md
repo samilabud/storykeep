@@ -3,8 +3,8 @@
 Answer a short questionnaire about someone's life, get an LLM-drafted story,
 edit it, and download it as PDF or DOCX. Paid with Stripe (test mode only).
 
-This is a learning project. Status: **M1 of 7 done** (foundation, auth,
-per-user access control). The full README comes in M7.
+This is a learning project. Status: **M2 of 7 done** (auth, per-user access control, questionnaire,
+version history). The full README comes in M7.
 
 ## Setup
 
