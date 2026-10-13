@@ -78,3 +78,21 @@ default, and Stripe cannot pass that.
 - **Hobby is for non-commercial use.** This is a test-mode learning project.
 - **The cost cap is per user.** A public URL lets anyone sign up. Keep
   `LLM_PROVIDER=mock`, or keep the cap low.
+
+## Proof that the deployed site works
+
+`tests/e2e/deployed.spec.ts` runs one full flow against a live URL:
+
+```bash
+E2E_BASE_URL=https://storykeep-one.vercel.app pnpm test:e2e:deployed
+```
+
+Result on 2026-10-13 against `https://storykeep-one.vercel.app`: passed in 15.8s.
+A browser registered a user, created a eulogy, paid $9 on Stripe Checkout with
+the test card 4242, saw the page unlock after Stripe called the deployed
+webhook, and got a draft as version 1 with no worker process running.
+Screenshot: [evidence/deployed-smoke.png](evidence/deployed-smoke.png).
+
+What this proves about production: the Neon database and its migrations, the
+login, the Stripe webhook endpoint with its signing secret, and the job queue
+driven by `after()`.
