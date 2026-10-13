@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { jobs, questionnaireAnswers, storyVersions } from "@/db/schema";
 import { consumeOrder, lockUnusedPaidOrder } from "@/billing/orders";
+import { hasSubscriptionAccessTx } from "@/billing/subscriptions";
 import { GENERATE_DRAFT } from "@/jobs/handlers/generate-draft";
 import type { Job } from "@/jobs/queue";
 import { getStoryForUser, lockStoryForUser } from "./data";
@@ -10,7 +11,8 @@ export type RequestDraftResult =
   | { status: "queued"; job: Job }
   | { status: "already_running"; job: Job }
   | { status: "no_answers" }
-  | { status: "payment_required" };
+  | { status: "payment_required" }
+  | { status: "subscription_required" };
 
 const forStory = (storyId: string) =>
   and(
@@ -90,6 +92,10 @@ export async function requestDraft(
       const order = await lockUnusedPaidOrder(tx, userId, storyId);
       if (!order) return { status: "payment_required" };
       await consumeOrder(tx, order.id, now);
+    } else if (!(await hasSubscriptionAccessTx(tx, userId, now))) {
+      // A life story needs a subscription that is active, or past due but
+      // still inside the grace period.
+      return { status: "subscription_required" };
     }
 
     const [job] = await tx

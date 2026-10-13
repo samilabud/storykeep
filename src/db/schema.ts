@@ -182,11 +182,15 @@ export const subscriptions = pgTable("subscriptions", {
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
   graceUntil: timestamp("grace_until", { withTimezone: true }),
   cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
-  // Stripe's `created` time of the newest event we applied. An older event
-  // that arrives late is ignored.
+  // Two "watermarks" for events that arrive out of order.
+  // Stripe's `created` time of the newest subscription snapshot we applied.
+  // An older snapshot that arrives late is ignored.
   lastEventCreatedAt: timestamp("last_event_created_at", {
     withTimezone: true,
   }),
+  // `created` time of the newest invoice.paid we saw. A payment failure
+  // older than this was already recovered and is ignored.
+  lastPaidEventAt: timestamp("last_paid_event_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

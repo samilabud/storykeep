@@ -15,11 +15,18 @@ async function main() {
   const { createGenerateDraftHandler, GENERATE_DRAFT } = await import(
     "@/jobs/handlers/generate-draft"
   );
+  const { createSendEmailHandler, createSmtpMailer } = await import(
+    "@/jobs/handlers/send-email"
+  );
+  const { SEND_EMAIL } = await import("@/email/outbox");
   const { runNextJob } = await import("@/jobs/worker");
   const { getLlmProvider } = await import("@/llm/provider");
 
   const llm = await getLlmProvider();
-  const handlers = { [GENERATE_DRAFT]: createGenerateDraftHandler(llm) };
+  const handlers = {
+    [GENERATE_DRAFT]: createGenerateDraftHandler(llm),
+    [SEND_EMAIL]: createSendEmailHandler(createSmtpMailer()),
+  };
   console.log(`[worker] started, LLM provider: ${llm.name}`);
 
   let stopping = false;

@@ -41,3 +41,62 @@ export function checkoutCompletedEvent(input: {
     { id: input.eventId },
   );
 }
+
+const DAY = 24 * 60 * 60;
+
+/** A customer.subscription.* event. `at` is Stripe's event time in seconds. */
+export function subscriptionEvent(
+  type: "created" | "updated" | "deleted",
+  input: {
+    customerId: string;
+    status: string;
+    at: number;
+    subscriptionId?: string;
+    periodEnd?: number;
+    cancelAtPeriodEnd?: boolean;
+    userId?: string;
+  },
+): Stripe.Event {
+  return stripeEvent(
+    `customer.subscription.${type}`,
+    {
+      id: input.subscriptionId ?? "sub_test_1",
+      object: "subscription",
+      customer: input.customerId,
+      status: input.status,
+      cancel_at_period_end: input.cancelAtPeriodEnd ?? false,
+      cancel_at: null,
+      metadata: input.userId ? { userId: input.userId } : {},
+      items: { data: [{ current_period_end: input.periodEnd ?? input.at + 30 * DAY }] },
+    },
+    { created: input.at },
+  );
+}
+
+/** An invoice.paid or invoice.payment_failed event for a subscription. */
+export function invoiceEvent(
+  type: "paid" | "payment_failed",
+  input: {
+    customerId: string;
+    at: number;
+    subscriptionId?: string;
+    invoiceId?: string;
+    attemptCount?: number;
+    eventId?: string;
+  },
+): Stripe.Event {
+  return stripeEvent(
+    `invoice.${type}`,
+    {
+      id: input.invoiceId ?? "in_test_1",
+      object: "invoice",
+      customer: input.customerId,
+      attempt_count: input.attemptCount ?? 1,
+      parent: {
+        type: "subscription_details",
+        subscription_details: { subscription: input.subscriptionId ?? "sub_test_1" },
+      },
+    },
+    { created: input.at, id: input.eventId },
+  );
+}

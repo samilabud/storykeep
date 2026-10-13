@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { users } from "@/db/schema";
+import { subscriptions, users } from "@/db/schema";
 
 /** Empties every table so each test starts clean. */
 export async function resetDb() {
@@ -18,4 +18,13 @@ export async function createTestUser(email: string) {
     .values({ email, passwordHash: "not-a-real-hash" })
     .returning();
   return user;
+}
+
+/** Gives a user an active subscription without going through Stripe. */
+export async function giveActiveSubscription(userId: string) {
+  await getDb().insert(subscriptions).values({
+    userId,
+    stripeSubscriptionId: `sub_test_seed_${userId}`,
+    status: "active",
+  });
 }

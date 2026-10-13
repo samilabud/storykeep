@@ -2,13 +2,33 @@ import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { orders } from "@/db/schema";
 import type { Tx } from "@/stories/data";
+import {
+  onInvoicePaid,
+  onInvoicePaymentFailed,
+  onSubscriptionEvent,
+} from "./subscriptions";
 
 /**
  * Applies one event to our tables. Runs inside the transaction opened by
  * processStripeEvent. Event types we do not use are stored and ignored.
  */
 export async function handleStripeEvent(tx: Tx, event: Stripe.Event) {
+  // Stripe's own timestamp for the event. Used to order events that arrive
+  // late. It has one-second precision.
+  const created = new Date(event.created * 1000);
+
   switch (event.type) {
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted":
+      await onSubscriptionEvent(tx, event.data.object, event.type, created);
+      break;
+    case "invoice.payment_failed":
+      await onInvoicePaymentFailed(tx, event.data.object, created);
+      break;
+    case "invoice.paid":
+      await onInvoicePaid(tx, event.data.object, created);
+      break;
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded":
       await onCheckoutSessionPaid(tx, event.data.object);
@@ -20,7 +40,8 @@ export async function handleStripeEvent(tx: Tx, event: Stripe.Event) {
 }
 
 async function onCheckoutSessionPaid(tx: Tx, session: Stripe.Checkout.Session) {
-  if (session.mode !== "payment") return; // subscriptions are handled in M5
+  // A subscription checkout is handled by the customer.subscription events.
+  if (session.mode !== "payment") return;
 
   // "completed" means the customer finished the form. For slow payment
   // methods the money can still be on its way. Unlock only when it is paid.

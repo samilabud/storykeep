@@ -19,7 +19,7 @@ import {
   requestDraft,
 } from "@/stories/drafts";
 import { listVersions, saveVersion } from "@/stories/versions";
-import { createTestUser, resetDb } from "../helpers/db";
+import { createTestUser, giveActiveSubscription, resetDb } from "../helpers/db";
 
 const T0 = new Date("2026-10-13T10:00:00Z");
 const later = (ms: number) => new Date(T0.getTime() + ms);
@@ -41,6 +41,8 @@ describe("LLM draft in a background job", () => {
     await resetDb();
     alice = await createTestUser("alice@example.com");
     bob = await createTestUser("bob@example.com");
+    // A life story needs a subscription. Billing has its own tests.
+    await giveActiveSubscription(alice.id);
     storyId = (
       await createStory(alice.id, { title: "Grandpa Joe", kind: "life_story" })
     ).id;

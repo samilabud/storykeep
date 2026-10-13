@@ -158,7 +158,7 @@ describe("Stripe one-time payment for a eulogy", () => {
       });
     });
 
-    it("does not gate a life story with the one-time payment", async () => {
+    it("a eulogy payment does not unlock a life story", async () => {
       const lifeStory = await createStory(alice.id, {
         title: "Aunt Rosa",
         kind: "life_story",
@@ -167,8 +167,11 @@ describe("Stripe one-time payment for a eulogy", () => {
         questionKey: "full_name",
         answerText: "Rosa",
       });
-      expect(await requestDraft(alice.id, lifeStory.id)).toMatchObject({
-        status: "queued",
+      await processStripeEvent(
+        checkoutCompletedEvent({ userId: alice.id, storyId: eulogyId }),
+      );
+      expect(await requestDraft(alice.id, lifeStory.id)).toEqual({
+        status: "subscription_required",
       });
     });
   });
