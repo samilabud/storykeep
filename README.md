@@ -3,9 +3,9 @@
 Answer a short questionnaire about someone's life, get an LLM-drafted story,
 edit it, and download it as PDF or DOCX. Paid with Stripe (test mode only).
 
-This is a learning project. Status: **M4 of 7 done** (auth, per-user access
+This is a learning project. Status: **M5 of 7 done** (auth, per-user access
 control, questionnaire, version history, LLM drafts in background jobs, Stripe
-one-time payment with replay-safe webhooks). The
+one-time payment with replay-safe webhooks, subscription with dunning). The
 full README comes in M7.
 
 ## Setup
@@ -39,7 +39,8 @@ The LLM is a mock by default (`LLM_PROVIDER=mock`), so no API key is needed.
 | `pnpm test` | Vitest against the test database |
 | `pnpm test:e2e` | Playwright browser tests |
 | `pnpm stripe:listen` | Forward Stripe test webhooks to the app |
-| `pnpm test:e2e:stripe` | A real test-mode payment in a browser (needs `stripe:listen`) |
+| `pnpm test:e2e:stripe` | Real test-mode payment and subscription in a browser (needs `stripe:listen`) |
+| `pnpm test:e2e:dunning` | Failed renewals with Stripe test clocks, about 3 minutes (needs `stripe:listen`) |
 | `pnpm typecheck` / `pnpm lint` | Static checks |
 | `pnpm llm:smoke` | One real Anthropic API call (needs a key, costs a few cents) |
 | `pnpm db:generate` / `pnpm db:migrate` | Create / apply migrations |
@@ -48,3 +49,4 @@ The LLM is a mock by default (`LLM_PROVIDER=mock`), so no API key is needed.
 
 - [docs/DECISIONS.md](docs/DECISIONS.md): what was chosen and why
 - [docs/evidence/](docs/evidence/): proof for each claim
+- [docs/evidence/dunning.md](docs/evidence/dunning.md): the failed-renewal timeline from real Stripe test clocks

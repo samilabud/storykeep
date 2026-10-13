@@ -1,0 +1,219 @@
+$ pnpm test --reporter=verbose
+
+> storykeep@0.1.0 test /Users/samilabud/code/storykeep
+> vitest run --reporter=verbose
+
+
+ RUN  v5.0.4 /Users/samilabud/code/storykeep
+
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > access follows the webhook-fed state > no subscription: a life story draft is refused 68ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > access follows the webhook-fed state > after signup: active, and drafts are allowed 36ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > access follows the webhook-fed state > finds the user by metadata when the customer id is not stored yet 25ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > access follows the webhook-fed state > ignores a subscription that belongs to no user of ours 17ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > dunning: active -> past_due -> recovered or ended > a failed renewal gives past_due, a 3 day grace period and one email 50ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > dunning: active -> past_due -> recovered or ended > inside the grace period the user keeps access 37ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > dunning: active -> past_due -> recovered or ended > when the grace period ends, access stops with no new event 50ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > dunning: active -> past_due -> recovered or ended > a retry that succeeds restores active and clears the grace period 54ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > dunning: active -> past_due -> recovered or ended > a late retry that succeeds after the grace period gives access back 42ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > dunning: active -> past_due -> recovered or ended > a final failure cancels, revokes access and sends the 'ended' email 65ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > dunning: active -> past_due -> recovered or ended > 'unpaid' (another Stripe setting for a final failure) also revokes access 55ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > dunning: active -> past_due -> recovered or ended > cancel at period end keeps access until Stripe deletes the subscription 38ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > out-of-order webhooks > invoice.paid before subscription.updated ends active 24ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > out-of-order webhooks > invoice.paid before the subscription exists at all ends active 23ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > out-of-order webhooks > recovery: invoice.paid arrives before the late past_due snapshot 34ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > out-of-order webhooks > a late payment_failed after recovery does not reopen dunning or send an email 34ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > out-of-order webhooks > events after 'deleted' do not bring the subscription back 35ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > out-of-order webhooks > the whole recovery story fully reversed still ends active 32ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > replays and emails > a replayed invoice.payment_failed does not send a second email 26ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > replays and emails > later failed retries of the same invoice do not send more emails 27ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > replays and emails > a failure on a later invoice (another month) sends a new email 36ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > replays and emails > the worker sends the queued email 38ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > replays and emails > a worker that does not know the email job leaves it for one that does 33ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > replays and emails > an SMTP failure is retried by the queue 30ms
+ ✓ tests/integration/stripe-subscription.test.ts > Stripe subscription and dunning > subscribing again > a new subscription after cancel replaces the old one 28ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > happy path > the request only queues a job, and the worker writes the draft later 72ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > happy path > records token usage and cost for the call 35ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > no duplicate jobs > two clicks give one job 19ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > no duplicate jobs > five requests at the same moment give one job 31ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > no duplicate jobs > two workers never claim the same job 23ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a job that fails once and is retried creates exactly one version 37ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a worker that dies after saving the draft does not create a second one 38ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > the same handler run twice at once still saves one draft 52ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a second draft after the first is a new job and a new version 37ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a user edit made while the job waits is kept in the history 28ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > failures > a failing LLM is retried, then marked failed with a clear message 36ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > failures > an error that cannot be fixed by retrying fails at once 23ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > failures > 'try again' after a failure reuses the same job row 36ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > daily cost cap > blocks a draft once the user has spent the daily budget 47ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > daily cost cap > resets the next day and does not count other users 39ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > guards > does not queue a draft when no question is answered 19ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > guards > does not let another user request or see a draft job 19ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > blocks a eulogy draft before payment 78ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > allows exactly one draft after the paid webhook 40ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > does not unlock when the session completed but is not paid yet 32ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > turns the pending order from checkout into a paid one 14ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > five draft requests at once use the single payment once 33ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > 'try again' after a failed job does not need a second payment 38ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > a full refund removes the unused unlock 16ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > payment unlocks generation > a eulogy payment does not unlock a life story 17ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > the same checkout.session.completed twice gives one order and one unlock 34ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > a replay after the unlock was used does not give a second unlock 27ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > the same event delivered five times at once is processed once 17ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > a different event for the same session still gives one order 17ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > a handler error rolls the event back, so Stripe's retry can succeed 20ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > replayed events > stores event types it does not handle and changes nothing else 14ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > accepts a correctly signed event and marks the order paid 18ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > answers 200 'duplicate' when Stripe sends the same event again 16ms
+stderr | tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > answers 500 when processing fails, so Stripe retries
+params: 00000000-0000-4000-8000-000000000000,9a9e59d1-dbd7-4f04-994b-3e19a68a0281,cs_test_1791917990724_58,pi_test_1791917990724_59,900,usd,paid,pi_test_1791917990724_59,paid
+    at NodePgPreparedQuery.queryWithCache (file:///Users/samilabud/code/storykeep/node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/pg-core/session.js:41:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at onCheckoutSessionPaid (/Users/samilabud/code/storykeep/src/billing/webhook-handlers.ts:61:3)
+    ... 4 lines matching cause stack trace ...
+    at /Users/samilabud/code/storykeep/tests/integration/stripe-one-time.test.ts:330:24
+    at async file:///Users/samilabud/code/storykeep/node_modules/.pnpm/vitest@5.0.4_@types+node@20.19.43_vite@8.3.4_@types+node@20.19.43_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_/node_modules/vitest/dist/chunks/run.Cm2sd7-x.js:2794:20 {
+  query: 'insert into "orders" ("id", "user_id", "story_id", "stripe_checkout_session_id", "stripe_payment_intent_id", "amount_cents", "currency", "status", "consumed_at", "created_at") values (default, $1, $2, $3, $4, $5, $6, $7, default, default) on conflict ("stripe_checkout_session_id") do update set "stripe_payment_intent_id" = $8, "status" = $9',
+  params: [
+    '00000000-0000-4000-8000-000000000000',
+    '9a9e59d1-dbd7-4f04-994b-3e19a68a0281',
+    'cs_test_1791917990724_58',
+    'pi_test_1791917990724_59',
+    900,
+    'usd',
+    'paid',
+    'pi_test_1791917990724_59',
+    'paid'
+  ],
+  cause: error: insert or update on table "orders" violates foreign key constraint "orders_user_id_users_id_fk"
+      at /Users/samilabud/code/storykeep/node_modules/.pnpm/pg@8.23.1/node_modules/pg/lib/client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///Users/samilabud/code/storykeep/node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/node-postgres/session.js:113:20
+      at async NodePgPreparedQuery.queryWithCache (file:///Users/samilabud/code/storykeep/node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/pg-core/session.js:39:16)
+      at onCheckoutSessionPaid (/Users/samilabud/code/storykeep/src/billing/webhook-handlers.ts:61:3)
+      at handleStripeEvent (/Users/samilabud/code/storykeep/src/billing/webhook-handlers.ts:34:7)
+      at /Users/samilabud/code/storykeep/src/billing/events.ts:41:5
+      at async NodePgSession.transaction (file:///Users/samilabud/code/storykeep/node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+      at POST (/Users/samilabud/code/storykeep/src/app/api/stripe/webhook/route.ts:32:20)
+      at /Users/samilabud/code/storykeep/tests/integration/stripe-one-time.test.ts:330:24 {
+    length: 295,
+    severity: 'ERROR',
+    code: '23503',
+    detail: 'Key (user_id)=(00000000-0000-4000-8000-000000000000) is not present in table "users".',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'orders',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'orders_user_id_users_id_fk',
+    file: 'ri_triggers.c',
+    line: '2599',
+    routine: 'ri_ReportViolation'
+  }
+}
+
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > rejects a request with no signature header 13ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > rejects an event signed with the wrong secret 13ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > rejects a body that was changed after signing 11ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > rejects a signature with an old timestamp (replay of a captured request) 11ms
+ ✓ tests/integration/stripe-one-time.test.ts > Stripe one-time payment for a eulogy > webhook endpoint: signature verification > answers 500 when processing fails, so Stripe retries 16ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > saves a first answer as revision 1 44ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > keeps the old answer when an answer is edited 17ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > does not add a revision when the same answer is saved again 17ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > records a skip, and lets the user answer it later 21ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > treats an empty answer as a skip 12ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > resumes at the first question that is not answered or skipped 20ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > reports no next question when all are handled 10ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > gives each concurrent edit of one answer its own revision 30ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > rejects a question key that does not exist 13ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > does not let another user save or read answers 17ms
+ ✓ tests/integration/story-versions.test.ts > story version history > numbers versions 1, 2, 3 and points the story at the newest 59ms
+ ✓ tests/integration/story-versions.test.ts > story version history > keeps every earlier version readable 22ms
+ ✓ tests/integration/story-versions.test.ts > story version history > keeps LLM drafts and user edits in the same history 17ms
+ ✓ tests/integration/story-versions.test.ts > story version history > does not create a version when the text did not change 21ms
+ ✓ tests/integration/story-versions.test.ts > story version history > restores an old version as a new version 22ms
+ ✓ tests/integration/story-versions.test.ts > story version history > gives concurrent saves different version numbers 33ms
+ ✓ tests/integration/story-versions.test.ts > story version history > does not let another user add, list, read or restore versions 20ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > lets the owner read their own story 38ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > does not let user A read user B's story 13ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > does not list user B's stories for user A 14ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > treats a malformed id as not found instead of crashing 11ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > returns 200 with the story for its owner 23ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > returns 404 when user A asks for user B's story 14ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > gives the same 404 for a story that does not exist 17ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > returns 401 when nobody is signed in 12ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: in order > signup ends active 1ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: in order > a failed renewal moves active to past_due and starts a 3 day grace period 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: in order > a second failure does not extend the grace period 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: in order > a retry that succeeds returns to active and clears the grace period 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: in order > a final failure ends canceled 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: in order > canceled is final: later events do not bring it back 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: in order > a failed FIRST payment does not become past_due 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: in order > subscribing again after cancel replaces the old subscription 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: in order > a late event from an old subscription does not touch the new one 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: out of order > invoice.paid before subscription.updated ends active 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: out of order > subscription.created arriving last does not undo active 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: out of order > recovery: invoice.paid first, then the late past_due snapshot, ends active 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: out of order > a late payment_failed after the recovery payment is ignored 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: out of order > an old invoice.paid arriving late does not undo a newer past_due 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: out of order > an older snapshot does not overwrite a newer one 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: out of order > signup: every arrival order ends [object Object],[object Object],[object Object] 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: out of order > signup, failed renewal: every arrival order ends [object Object],[object Object],[object Object],[object Object],[object Object] 1ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: out of order > signup, failed renewal, retry succeeds: every arrival order ends [object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object] 15ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: out of order > failed renewal, then final failure: every arrival order ends [object Object],[object Object],[object Object],[object Object],[object Object],[object Object] 1ms
+ ✓ tests/unit/subscription-state-machine.test.ts > subscription state machine: out of order > recovery in any order also ends with no grace period and the new period end 38ms
+ ✓ tests/unit/subscription-state-machine.test.ts > access rule > active has access 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > access rule > past_due keeps access inside the grace period 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > access rule > past_due loses access the moment the grace period ends, with no event 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > access rule > canceled has no access 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > access rule > unpaid has no access 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > access rule > incomplete has no access 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > access rule > no subscription has no access 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > Stripe status mapping > active -> active 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > Stripe status mapping > trialing -> active 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > Stripe status mapping > past_due -> past_due 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > Stripe status mapping > unpaid -> unpaid 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > Stripe status mapping > paused -> unpaid 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > Stripe status mapping > canceled -> canceled 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > Stripe status mapping > incomplete_expired -> canceled 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > Stripe status mapping > incomplete -> incomplete 0ms
+ ✓ tests/unit/subscription-state-machine.test.ts > Stripe status mapping > something_new -> incomplete 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > returns the text, the token counts and the cost 1ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > sends the answers and the no-invention rule to the model 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > asks for a server-side fallback on Opus, but not on Haiku 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > prices by the model that answered, which can be a fallback 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > treats a refusal as final, not retryable 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > treats a draft cut off by the length limit as final 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies rate limit (429) as retryable=Error: 429 slow down 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies server error (500) as retryable=Error: 500 oops 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies overloaded (529) as retryable=Error: 529 overloaded 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies network failure as retryable=Error: socket hang up 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies bad API key (401) as retryable=Error: 401 bad key 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies bad request (400) as retryable=Error: 400 bad 0ms
+ ✓ tests/unit/llm.test.ts > pricing > rounds up to whole cents 0ms
+ ✓ tests/unit/llm.test.ts > pricing > charges an unknown model at the highest rate 0ms
+ ✓ tests/unit/llm.test.ts > prompt > asks for the right kind of text 0ms
+ ✓ tests/unit/llm.test.ts > backoff > doubles after each failed try and stops growing at 5 minutes 0ms
+
+ Test Files  8 passed (8)
+      Tests  140 passed (140)
+   Start at  14:59:46
+   Duration  6.35s (tests 50%, import 48%, transform 2%)
+
+
+
+$ pnpm test:e2e:stripe    (real Stripe test mode, 2026-10-13)
+  ✓  tests/e2e/payment.spec.ts › one-time payment: pay $9 on Stripe Checkout, webhook unlocks one eulogy draft (12.1s)
+  ✓  tests/e2e/subscription.spec.ts › subscription: subscribe on Stripe Checkout, open the portal, cancel (19.0s)
+  2 passed (20.4s)
+
+$ pnpm test:e2e:dunning   (real Stripe test clocks, 2026-10-13)
+  ✓  tests/e2e/dunning.spec.ts › dunning A: a renewal fails, the user is past_due with access, then a retry succeeds
+  ✓  tests/e2e/dunning.spec.ts › dunning B: every retry fails, the subscription ends and access is revoked (2.6m)
+  2 passed (3.1m)

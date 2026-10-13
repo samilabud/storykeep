@@ -1,0 +1,94 @@
+# Dunning run in Stripe TEST MODE, started 2026-10-13T18:54:24.886Z
+
+## Scenario A: failed renewal, then a retry that succeeds
+
+### A1. Subscribed with the card 4242 (first invoice paid)
+  test clock time      : 2026-10-13T18:54:26Z
+  Stripe subscription  : active
+  Stripe latest invoice: paid, attempt_count=1, next_payment_attempt=-
+  our database         : status=active, grace_until=-
+
+### A2. One month later: renewal charged to the card 0341, which fails
+  test clock time      : 2026-11-13T20:54:26Z
+  Stripe subscription  : past_due
+  Stripe latest invoice: open, attempt_count=1, next_payment_attempt=2026-11-15T17:23:31Z
+  our database         : status=past_due, grace_until=2026-10-16T18:54:42.000Z
+
+  emails in Mailpit    : ["Your StoryKeep payment did not go through"]
+
+### A3. Card fixed. Clock moved to Stripe's next retry, which succeeds
+  test clock time      : 2026-11-15T18:23:31Z
+  Stripe subscription  : active
+  Stripe latest invoice: paid, attempt_count=2, next_payment_attempt=-
+  our database         : status=active, grace_until=-
+
+## Scenario B: failed renewal, then every retry fails
+
+### B1. Subscribed with the card 4242 (first invoice paid)
+  test clock time      : 2026-10-13T18:54:55Z
+  Stripe subscription  : active
+  Stripe latest invoice: paid, attempt_count=1, next_payment_attempt=-
+  our database         : status=active, grace_until=-
+
+### B2. One month later: renewal charged to the card 0341, which fails
+  test clock time      : 2026-11-13T20:54:55Z
+  Stripe subscription  : past_due
+  Stripe latest invoice: open, attempt_count=1, next_payment_attempt=2026-11-15T14:52:33Z
+  our database         : status=past_due, grace_until=2026-10-16T18:55:15.000Z
+
+### B3. Retry 1 ran and failed
+  test clock time      : 2026-11-15T15:52:33Z
+  Stripe subscription  : past_due
+  Stripe latest invoice: open, attempt_count=2, next_payment_attempt=2026-11-17T12:14:46Z
+  our database         : status=past_due, grace_until=2026-10-16T18:55:15.000Z
+
+### B4. Retry 2 ran and failed
+  test clock time      : 2026-11-17T13:14:46Z
+  Stripe subscription  : past_due
+  Stripe latest invoice: open, attempt_count=3, next_payment_attempt=2026-11-19T06:59:11Z
+  our database         : status=past_due, grace_until=2026-10-16T18:55:15.000Z
+
+### B5. Retry 3 ran and failed
+  test clock time      : 2026-11-19T07:59:11Z
+  Stripe subscription  : past_due
+  Stripe latest invoice: open, attempt_count=4, next_payment_attempt=2026-11-21T03:12:28Z
+  our database         : status=past_due, grace_until=2026-10-16T18:55:15.000Z
+
+### B6. Retry 4 ran and failed
+  test clock time      : 2026-11-21T04:12:28Z
+  Stripe subscription  : past_due
+  Stripe latest invoice: open, attempt_count=5, next_payment_attempt=2026-11-22T20:59:53Z
+  our database         : status=past_due, grace_until=2026-10-16T18:55:15.000Z
+
+### B7. Retry 5 ran and failed
+  test clock time      : 2026-11-22T21:59:53Z
+  Stripe subscription  : past_due
+  Stripe latest invoice: open, attempt_count=6, next_payment_attempt=2026-11-24T14:34:39Z
+  our database         : status=past_due, grace_until=2026-10-16T18:55:15.000Z
+
+### B8. Retry 6 ran and failed
+  test clock time      : 2026-11-24T15:34:39Z
+  Stripe subscription  : past_due
+  Stripe latest invoice: open, attempt_count=7, next_payment_attempt=2026-11-26T09:22:23Z
+  our database         : status=past_due, grace_until=2026-10-16T18:55:15.000Z
+
+### B9. Retry 7 ran and failed
+  test clock time      : 2026-11-26T10:22:23Z
+  Stripe subscription  : past_due
+  Stripe latest invoice: open, attempt_count=8, next_payment_attempt=2026-11-27T20:22:23Z
+  our database         : status=past_due, grace_until=2026-10-16T18:55:15.000Z
+
+### B10. Retry 8 ran and failed
+  test clock time      : 2026-11-27T21:22:23Z
+  Stripe subscription  : canceled
+  Stripe latest invoice: open, attempt_count=9, next_payment_attempt=-
+  our database         : status=canceled, grace_until=-
+
+### B-end. No retries left: Stripe ended the subscription
+  test clock time      : 2026-11-27T21:22:23Z
+  Stripe subscription  : canceled
+  Stripe latest invoice: open, attempt_count=9, next_payment_attempt=-
+  our database         : status=canceled, grace_until=-
+
+  emails in Mailpit    : ["Your StoryKeep subscription has ended","Your StoryKeep payment did not go through"]
+

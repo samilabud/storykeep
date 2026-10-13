@@ -175,17 +175,25 @@ should match the provider's invoice.
 **Mock provider by default.** `LLM_PROVIDER=mock` builds a draft from the
 answers with no network call. Tests are free, offline and repeatable.
 
-**Anthropic provider.** Model `claude-opus-5-5`, set by `ANTHROPIC_MODEL`.
-It uses the API's server-side fallback, so a safety decline is retried once on
-another model inside the same call. Cost is priced by the model that really
-answered.
+**Anthropic provider.** The default model is `claude-haiku-5-5`, set by
+`ANTHROPIC_MODEL`. I started on `claude-opus-5-5` (about 2.5 cents per draft)
+and moved to Haiku (about 0.04 cents) to keep a public demo cheap. Opus writes
+a richer text, and the code path is the same. On Opus and Sonnet the provider
+uses the API's server-side fallback, so a safety decline is retried once on
+another model inside the same call. Haiku has no such fallback, so the option
+is not sent. Cost is priced by the model that really answered.
 
 ### Proven with the real API
 
 - One real call with `pnpm llm:smoke` on 2026-10-13: `claude-opus-5-5`,
   299 input tokens, 1206 output tokens, 3 cents. See
   `docs/evidence/m3-real-api-smoke.md`.
-- Still mock only: the full path from the button through the worker. The
+- A second real call on 2026-10-13 after the switch to `claude-haiku-5-5`:
+  299 input tokens, 679 output tokens, $0.0004 (counted as 1 cent, because
+  cost is rounded up to whole cents).
+- The full path from the button through the worker also ran with the real
+  model twice, by accident: a worker with `LLM_PROVIDER=anthropic` picked up
+  two browser-test jobs. Both drafts were saved as versions. The
   smoke script calls the provider directly.
 
 ### Cut or postponed
@@ -275,3 +283,102 @@ start with `sk_test_`.
 - Download gating comes with the export in M6.
 - Refunds: a full refund marks the order `refunded`. Partial refunds are ignored.
 - No receipt email. Stripe can send its own.
+
+## M5. Subscription and dunning
+
+**Dunning in one sentence.** When a renewal payment fails, do not cut the
+customer off at once: keep trying the card, tell them, give them a few days,
+and only then remove access.
+
+**The state machine is a pure function.** `src/billing/state-machine.ts` has
+no database, no Stripe and no clock. It takes the state and one event and
+returns the next state, or null for "ignore". That is why it can be tested
+with thousands of event orders in milliseconds.
+
+**States.** `active -> past_due -> active` (a retry succeeded) or
+`past_due -> canceled / unpaid` (retries ran out, or the user cancelled).
+`canceled` is final for that subscription.
+
+**Access is derived, never stored.** There is no `has_access` column.
+`hasSubscriptionAccess(state, now)` answers: `active` yes, `past_due` yes
+until `grace_until`, everything else no. Two results:
+- The end of the grace period needs no cron job and no event. Access stops
+  when the clock passes `grace_until`.
+- The browser is never asked. The row is written only by verified webhooks.
+
+**Grace period: 3 days, started at the first failure, never extended.** A
+second failed retry does not give 3 more days.
+
+**Stripe owns the retries. My app owns the access.** Stripe decides when to
+retry the card (8 retries over about 2 weeks in this sandbox) and what
+happens at the end (cancel). My app only decides how long the user keeps
+access meanwhile. The two windows are different on purpose.
+
+**Out-of-order events: two watermarks.** Stripe does not promise the order
+of webhooks. The row stores two timestamps taken from Stripe's `event.created`:
+- `last_event_created_at`: the newest subscription snapshot applied. An
+  older snapshot is ignored.
+- `last_paid_event_at`: the newest `invoice.paid` seen. A failure older than
+  that was already recovered and is ignored.
+Plus two simple rules: `deleted` always wins, and `created` never overwrites.
+
+**Why not just fetch the subscription from Stripe on every event?** That is
+the other common design, and it makes ordering easy: always read the latest
+truth. I did not use it here because it adds an API call inside every
+webhook and cannot be tested offline. For production I would add it as a
+safety net: a nightly job that compares my rows with Stripe and fixes drift.
+
+**Known limit of the watermarks.** `event.created` has one-second precision.
+Two different snapshots in the same second are applied in arrival order. The
+nightly reconcile above is the answer to that.
+
+**One row lock per user.** Each handler locks the user row first
+(`SELECT ... FOR UPDATE`), so two webhooks for one customer run one after
+another and cannot both read the old state.
+
+**Emails use an outbox.** The webhook does not send email. It inserts a job
+row in the same transaction as the state change. If the transaction rolls
+back, no email exists. If Stripe replays the event, the job's unique key
+stops a second email. The worker sends it.
+
+**One email per failed invoice.** Not one per retry. See "What broke first".
+
+**Customer Portal for card updates and cancel.** Stripe hosts it, so I build
+no card form. The portal configuration is created through the API on first
+use, so setup needs no clicking in the dashboard.
+
+**No second subscription.** Checkout is not started while the user has an
+`active` or `past_due` subscription. They are sent to the portal instead.
+
+### What broke first
+
+- **Nine emails for one failed payment.** The first real test-clock run sent
+  an email for every failed retry. The key was "invoice + attempt number". It
+  is now "invoice".
+- **An old worker failed a new job type.** A worker started before the email
+  code existed picked up the email job and marked it failed ("no handler").
+  This is exactly what happens in a rolling deploy. Fix: a worker now claims
+  only the job types it has handlers for.
+- **A missed recovery payment reopened dunning.** Found by the test that
+  tries every event order, before any real run. Fixed with rule 6b.
+- **Test clocks do not move my app's clock.** `event.created` is real time.
+  The grace period cannot be "fast-forwarded" with a test clock, so its end
+  is proven by tests that inject `now`.
+
+### What I would monitor in production
+
+- Webhook responses that are not 2xx, and the age of the newest event in
+  `stripe_events` (a silent webhook is the worst failure).
+- Count of subscriptions per status, and how many are `past_due` beyond their
+  grace period.
+- Recovery rate: how many `past_due` return to `active`.
+- Jobs in `failed`, especially `send_email`.
+- Drift between my `subscriptions` rows and Stripe (the reconcile job).
+
+### Cut or postponed
+
+- `customer.subscription.trial_will_end` is not handled. There are no trials.
+- No reminder email shortly before the grace period ends.
+- No proration or plan changes. There is one plan.
+- No reconcile job yet. It is described above, not built.
+- Download gating by subscription comes with the export in M6.
