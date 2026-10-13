@@ -1,0 +1,88 @@
+$ pnpm test --reporter=verbose
+
+> storykeep@0.1.0 test /Users/samilabud/code/storykeep
+> vitest run --reporter=verbose
+
+
+ RUN  v5.0.4 /Users/samilabud/code/storykeep
+
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > happy path > the request only queues a job, and the worker writes the draft later 80ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > happy path > records token usage and cost for the call 31ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > no duplicate jobs > two clicks give one job 20ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > no duplicate jobs > five requests at the same moment give one job 38ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > no duplicate jobs > two workers never claim the same job 22ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a job that fails once and is retried creates exactly one version 39ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a worker that dies after saving the draft does not create a second one 29ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > the same handler run twice at once still saves one draft 52ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a second draft after the first is a new job and a new version 43ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > retries are idempotent > a user edit made while the job waits is kept in the history 26ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > failures > a failing LLM is retried, then marked failed with a clear message 40ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > failures > an error that cannot be fixed by retrying fails at once 22ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > failures > 'try again' after a failure reuses the same job row 33ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > daily cost cap > blocks a draft once the user has spent the daily budget 44ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > daily cost cap > resets the next day and does not count other users 44ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > guards > does not queue a draft when no question is answered 18ms
+ ✓ tests/integration/draft-jobs.test.ts > LLM draft in a background job > guards > does not let another user request or see a draft job 16ms
+ ✓ tests/integration/story-versions.test.ts > story version history > numbers versions 1, 2, 3 and points the story at the newest 64ms
+ ✓ tests/integration/story-versions.test.ts > story version history > keeps every earlier version readable 20ms
+ ✓ tests/integration/story-versions.test.ts > story version history > keeps LLM drafts and user edits in the same history 17ms
+ ✓ tests/integration/story-versions.test.ts > story version history > does not create a version when the text did not change 16ms
+ ✓ tests/integration/story-versions.test.ts > story version history > restores an old version as a new version 21ms
+ ✓ tests/integration/story-versions.test.ts > story version history > gives concurrent saves different version numbers 38ms
+ ✓ tests/integration/story-versions.test.ts > story version history > does not let another user add, list, read or restore versions 21ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > saves a first answer as revision 1 45ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > keeps the old answer when an answer is edited 19ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > does not add a revision when the same answer is saved again 19ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > records a skip, and lets the user answer it later 17ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > treats an empty answer as a skip 12ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > resumes at the first question that is not answered or skipped 23ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > reports no next question when all are handled 9ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > gives each concurrent edit of one answer its own revision 27ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > rejects a question key that does not exist 17ms
+ ✓ tests/integration/questionnaire.test.ts > questionnaire answers > does not let another user save or read answers 27ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > lets the owner read their own story 37ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > does not let user A read user B's story 10ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > does not list user B's stories for user A 12ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > data layer > treats a malformed id as not found instead of crashing 12ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > returns 200 with the story for its owner 26ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > returns 404 when user A asks for user B's story 10ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > gives the same 404 for a story that does not exist 10ms
+ ✓ tests/integration/story-access.test.ts > per-user access control for stories > GET /api/stories/:id > returns 401 when nobody is signed in 8ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > returns the text, the token counts and the cost 2ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > sends the answers and the no-invention rule to the model 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > prices by the model that answered, which can be a fallback 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > treats a refusal as final, not retryable 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > treats a draft cut off by the length limit as final 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies rate limit (429) as retryable=Error: 429 slow down 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies server error (500) as retryable=Error: 500 oops 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies overloaded (529) as retryable=Error: 529 overloaded 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies network failure as retryable=Error: socket hang up 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies bad API key (401) as retryable=Error: 401 bad key 0ms
+ ✓ tests/unit/llm.test.ts > Anthropic provider (SDK replaced by a fake) > classifies bad request (400) as retryable=Error: 400 bad 0ms
+ ✓ tests/unit/llm.test.ts > pricing > rounds up to whole cents 0ms
+ ✓ tests/unit/llm.test.ts > pricing > charges an unknown model at the highest rate 0ms
+ ✓ tests/unit/llm.test.ts > prompt > asks for the right kind of text 0ms
+ ✓ tests/unit/llm.test.ts > backoff > doubles after each failed try and stops growing at 5 minutes 0ms
+
+ Test Files  5 passed (5)
+      Tests  57 passed (57)
+   Start at  10:08:07
+   Duration  3.65s (import 57%, tests 40%, transform 2%)
+
+
+
+$ pnpm test:e2e
+
+> storykeep@0.1.0 test:e2e /Users/samilabud/code/storykeep
+> playwright test
+
+
+Running 5 tests using 3 workers
+
+  ✓  3 tests/e2e/questionnaire.spec.ts:6:5 › questionnaire: save, skip, resume after signing in again, edit with history (6.3s)
+  ✓  1 tests/e2e/story-access.spec.ts:8:5 › a user cannot open another user's story (9.0s)
+  ✓  2 tests/e2e/draft.spec.ts:27:5 › an AI draft is written in the background after the page is closed (9.2s)
+  ✓  4 tests/e2e/questionnaire.spec.ts:69:5 › story text: each save is a new version, and an old one can be restored (3.6s)
+  ✓  5 tests/e2e/story-access.spec.ts:44:5 › login rejects a wrong password (1.4s)
+
+  5 passed (11.3s)

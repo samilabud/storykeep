@@ -109,3 +109,86 @@ uses it so a retried LLM job cannot insert a second draft.
 - No rich text editor. A plain textarea is enough to prove versions.
 - No diff view between versions.
 - No autosave while typing. The user saves each answer with a button.
+
+## M3. LLM drafts in background jobs
+
+**A Postgres table as the queue, not Inngest.** No extra service to run. The
+whole queue is about 150 lines in `src/jobs/`, and I can explain each one.
+Trade-off: the worker polls once per second, so a job can wait up to a second.
+For high volume I would use a real queue or `LISTEN/NOTIFY`.
+
+**The web request only inserts a row.** `requestDraft` writes one row to
+`jobs` and returns. A separate process (`pnpm worker`) does the slow LLM call.
+The draft is written even if the user closes the tab or the web server
+restarts.
+
+**`FOR UPDATE SKIP LOCKED` to claim a job.** A worker locks the row it takes.
+`SKIP LOCKED` makes other workers skip that row instead of waiting. Two
+workers can never take the same job.
+
+**At-least-once delivery, so handlers must be idempotent.** A job can run
+twice: after a failure, or when a worker dies halfway. A queue cannot promise
+"exactly once". What it can promise is "never forgotten". So the handler is
+written to be safe to repeat.
+
+**How a retry cannot create a duplicate draft. Three layers:**
+1. `jobs.idempotency_key` is UNIQUE. The key is `draft:<story>:v<next version>`.
+   A double click builds the same key, so only one job row exists.
+2. The handler first looks for a version with that key. If it is there, an
+   earlier run already finished, and no second paid LLM call is made.
+3. `story_versions.idempotency_key` is UNIQUE. If two runs race past step 2,
+   the database lets only one row in.
+
+I removed layers 2 and the check inside `saveVersion` as an experiment. The
+tests failed, and layer 3 still blocked the duplicate with a unique violation.
+
+**Retries with exponential backoff.** 3 tries. Waits of 5s, then 10s (the
+delay doubles, with a 5 minute ceiling). Reason: a provider that is overloaded
+needs time. Retrying at once makes it worse.
+
+**Retryable or not is decided by the error type.** Rate limit, 5xx and network
+errors are temporary: retry. A bad request, a bad key, a refusal or a cut-off
+draft would fail the same way again: fail at once. The SDK's own retries are
+off (`maxRetries: 0`) so two retry layers do not multiply.
+
+**Stale lock recovery.** A job `running` for more than 5 minutes is treated as
+a dead worker and is claimed again. Trade-off: a job that really takes more
+than 5 minutes would run twice. That is safe here (idempotent) but wasteful.
+A heartbeat would fix it.
+
+**Two messages per failure.** `jobs.last_error` keeps the technical cause
+(`LLM_UNAVAILABLE: Rate limited`). The user sees plain words chosen from the
+error code. Users never see a stack trace.
+
+**Daily cost cap per user.** Default 100 cents per UTC day. Every LLM call
+that returns writes a row to `llm_usage`. Before a call, the handler sums
+today's rows. Cost is rounded up to whole cents, and an unknown model is
+priced at the highest rate, so the cap can trigger early but never late.
+Known gap: it is a soft cap. Two jobs for one user at the same moment can both
+pass the check. I block that case anyway (one active draft job per story), but
+a strict cap would reserve the budget in the same transaction.
+
+**Usage is recorded when money is spent, not when the draft is saved.** If the
+save fails after a successful call, the usage row still exists. The table
+should match the provider's invoice.
+
+**Mock provider by default.** `LLM_PROVIDER=mock` builds a draft from the
+answers with no network call. Tests are free, offline and repeatable.
+
+**Anthropic provider.** Model `claude-opus-5-5`, set by `ANTHROPIC_MODEL`.
+It uses the API's server-side fallback, so a safety decline is retried once on
+another model inside the same call. Cost is priced by the model that really
+answered.
+
+### Not proven yet
+
+- **The real Anthropic API has not been called.** The Anthropic provider is
+  tested with the SDK replaced by a fake: text, tokens, cost and the
+  retryable/non-retryable split. `pnpm llm:smoke` makes one real call. It
+  needs a key and costs a few cents, so it is left for me to run.
+
+### Cut or postponed
+
+- No streaming of the draft into the page. The page polls every 2 seconds.
+- No job dashboard. `select * from jobs` is the dashboard.
+- No dead-letter queue. A failed job stays in the table with its error.
