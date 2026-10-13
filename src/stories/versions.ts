@@ -44,6 +44,17 @@ export async function saveVersion(
       .orderBy(desc(storyVersions.versionNo))
       .limit(1);
 
+    // Idempotency: if a version with this key exists, a previous run of the
+    // same job already saved its draft. Return it and insert nothing.
+    // The UNIQUE constraint on idempotency_key backs this check up.
+    if (input.idempotencyKey) {
+      const [existing] = await tx
+        .select()
+        .from(storyVersions)
+        .where(eq(storyVersions.idempotencyKey, input.idempotencyKey));
+      if (existing) return { status: "unchanged", version: existing };
+    }
+
     if (input.source === "user_edit" && story.currentVersionId) {
       const [current] = await tx
         .select()
@@ -104,6 +115,26 @@ export async function getVersion(
       and(
         eq(storyVersions.storyId, story.id),
         eq(storyVersions.versionNo, versionNo),
+      ),
+    );
+  return version ?? null;
+}
+
+export async function getVersionByIdempotencyKey(
+  userId: string,
+  storyId: string,
+  idempotencyKey: string,
+): Promise<StoryVersion | null> {
+  const story = await getStoryForUser(userId, storyId);
+  if (!story) return null;
+
+  const [version] = await getDb()
+    .select()
+    .from(storyVersions)
+    .where(
+      and(
+        eq(storyVersions.storyId, story.id),
+        eq(storyVersions.idempotencyKey, idempotencyKey),
       ),
     );
   return version ?? null;
