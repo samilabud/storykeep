@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import * as z from "zod";
-import { getDb } from "@/db/client";
+import { getDb, type Db } from "@/db/client";
 import { stories } from "@/db/schema";
 
 // Data access for stories. Every function takes the user id and puts it in
@@ -44,4 +44,29 @@ export async function createStory(
     .values({ userId, title: input.title, kind: input.kind })
     .returning();
   return story;
+}
+
+/** The handle Drizzle gives you inside `db.transaction(...)`. */
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+/**
+ * Inside a transaction: load the story if this user owns it, and lock its row
+ * until the transaction ends (SELECT ... FOR UPDATE).
+ *
+ * The lock makes writes to one story wait in line. Two saves at the same time
+ * cannot both read "latest version is 3" and both try to write version 4.
+ */
+export async function lockStoryForUser(
+  tx: Tx,
+  userId: string,
+  storyId: string,
+): Promise<Story | null> {
+  if (!uuidSchema.safeParse(storyId).success) return null;
+
+  const [story] = await tx
+    .select()
+    .from(stories)
+    .where(and(eq(stories.id, storyId), eq(stories.userId, userId)))
+    .for("update");
+  return story ?? null;
 }
