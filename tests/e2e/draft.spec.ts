@@ -1,5 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 import { expect, test } from "@playwright/test";
+import { seedActiveSubscription } from "./db";
 import { createStory, register } from "./helpers";
 import { startMockWorker } from "./worker";
 
@@ -21,6 +22,8 @@ test("an AI draft is written in the background after the page is closed", async 
 }) => {
   const page = await context.newPage();
   await register(page, `finn-${run}@example.com`);
+  // A life story needs a subscription. Billing has its own tests.
+  await seedActiveSubscription(`finn-${run}@example.com`);
   await createStory(page, "Grandma Ada");
   const storyPath = new URL(page.url()).pathname;
   const main = page.locator("main:visible");
@@ -47,8 +50,12 @@ test("an AI draft is written in the background after the page is closed", async 
   const later = await context.newPage();
   await later.goto(storyPath);
   const laterMain = later.locator("main:visible");
-  await expect(laterMain.locator("ol li")).toHaveText([/Version 1.*AI draft · current/]);
-  await expect(laterMain.getByLabel("Story text")).toHaveValue(/Ada Lovelace Byron, called Ada\./);
+  await expect(laterMain.locator("ol li")).toHaveText([/Version 1.*AI draft · current/], {
+    timeout: 20_000, // a cold dev server can be slow on the first load
+  });
+  // "Ada Lovelace Byron" comes from the answer. Checked loosely, so the test
+  // also passes when a worker with the real model picked up the job.
+  await expect(laterMain.getByLabel("Story text")).toHaveValue(/Ada Lovelace Byron/);
   await expect(laterMain.getByRole("button", { name: "Write a new draft" })).toBeVisible();
   await later.screenshot({ path: "docs/evidence/m3-draft-ready.png", fullPage: true });
 });

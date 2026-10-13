@@ -14,11 +14,16 @@ export default function StoriesPage() {
     <main className="mx-auto w-full max-w-2xl px-4 py-10">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">My stories</h1>
-        <form action={logout}>
-          <button type="submit" className="text-sm underline">
-            Sign out
-          </button>
-        </form>
+        <div className="flex items-center gap-4">
+          <Link href="/billing" className="text-sm underline">
+            Billing
+          </Link>
+          <form action={logout}>
+            <button type="submit" className="text-sm underline">
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
 
       {/* Reading the session needs the request, so it streams in behind Suspense. */}

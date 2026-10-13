@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { requireStoryOwner } from "@/auth/guards";
 import { getEulogyPayment } from "@/billing/orders";
+import { getSubscriptionView } from "@/billing/subscriptions";
 import { getCurrentAnswers } from "@/questionnaire/data";
 import { nextQuestionKey, QUESTIONS } from "@/questionnaire/questions";
 import { draftFailureMessage, getLatestDraftJob } from "@/stories/drafts";
@@ -34,11 +35,12 @@ async function StoryDetail({ params, searchParams }: Props) {
   const { id } = await params;
   const { checkout } = await searchParams;
   const story = await requireStoryOwner(id);
-  const [answers, versions, draftJob, eulogyPayment] = await Promise.all([
+  const [answers, versions, draftJob, eulogyPayment, subscription] = await Promise.all([
     getCurrentAnswers(story.userId, story.id),
     listVersions(story.userId, story.id),
     getLatestDraftJob(story.userId, story.id),
     story.kind === "eulogy" ? getEulogyPayment(story.userId, story.id) : null,
+    story.kind === "life_story" ? getSubscriptionView(story.userId) : null,
   ]);
 
   const handled = answers?.size ?? 0;
@@ -55,6 +57,11 @@ async function StoryDetail({ params, searchParams }: Props) {
   // free, because that payment has not produced a draft yet.
   const needsPayment =
     story.kind === "eulogy" && eulogyPayment !== "paid_unused" && !draftError;
+  // A life story needs a subscription with access (active, or past due but
+  // inside the grace period).
+  const needsSubscription =
+    story.kind === "life_story" && !subscription?.hasAccess && !draftError;
+
   // The browser came back from Stripe, but the webhook has not arrived yet.
   // Access comes from the webhook, so wait for it instead of trusting the URL.
   const confirmingPayment = needsPayment && checkout === "success" && !drafting;
@@ -130,6 +137,22 @@ async function StoryDetail({ params, searchParams }: Props) {
                   Pay $9 with Stripe
                 </button>
               </form>
+            ) : needsSubscription ? (
+              <div className="mt-3">
+                <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
+                  {subscription?.row && subscription.row.status !== "incomplete"
+                    ? "Your subscription does not give access right now."
+                    : "Life Story drafts are part of the $7/month subscription."}
+                </p>
+                <Link
+                  href="/billing"
+                  className="inline-block rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                >
+                  {subscription?.row && subscription.row.status !== "incomplete"
+                    ? "Go to billing"
+                    : "Subscribe to write drafts"}
+                </Link>
+              </div>
             ) : answered === 0 ? (
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 Answer at least one question to get a draft.

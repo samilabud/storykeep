@@ -15,7 +15,8 @@
     "worker": "tsx worker.ts",
     "llm:smoke": "tsx scripts/llm-smoke.ts",
     "stripe:listen": "sh -c 'set -a; . ./.env.local; set +a; stripe listen --api-key \"$STRIPE_SECRET_KEY\" --forward-to localhost:3100/api/stripe/webhook'",
-    "test:e2e:stripe": "STRIPE_E2E=1 playwright test payment"
+    "test:e2e:stripe": "STRIPE_E2E=1 playwright test payment subscription",
+    "test:e2e:dunning": "STRIPE_E2E=1 playwright test dunning"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

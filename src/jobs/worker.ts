@@ -19,7 +19,7 @@ export async function runNextJob(
   handlers: JobHandlers,
   now: Date = new Date(),
 ): Promise<RunResult | null> {
-  const job = await claimNextJob(now);
+  const job = await claimNextJob(now, Object.keys(handlers));
   if (!job) return null;
 
   try {

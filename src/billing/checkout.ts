@@ -3,7 +3,14 @@ import { getDb } from "@/db/client";
 import { orders, users } from "@/db/schema";
 import { getStoryForUser } from "@/stories/data";
 import { getEulogyPayment } from "./orders";
-import { appUrl, CURRENCY, EULOGY_PRICE_CENTS, getStripe } from "./stripe";
+import {
+  appUrl,
+  CURRENCY,
+  EULOGY_PRICE_CENTS,
+  getStripe,
+  SUBSCRIPTION_PRICE_CENTS,
+} from "./stripe";
+import { getSubscriptionView } from "./subscriptions";
 
 /** Our user's Stripe customer id. Created on first use and stored. */
 export async function getOrCreateStripeCustomer(userId: string): Promise<string> {
@@ -86,4 +93,88 @@ export async function startEulogyCheckout(
   });
 
   return { status: "redirect", url: session.url };
+}
+
+export type StartSubscriptionResult =
+  | { status: "redirect"; url: string }
+  | { status: "already_subscribed" };
+
+/** Starts the $7/month subscription on Stripe-hosted Checkout. */
+export async function startSubscriptionCheckout(
+  userId: string,
+): Promise<StartSubscriptionResult> {
+  // Never sell a second subscription to a user who has one that is active
+  // or still being retried. They should fix their card in the portal instead.
+  const { row } = await getSubscriptionView(userId);
+  if (row && (row.status === "active" || row.status === "past_due")) {
+    return { status: "already_subscribed" };
+  }
+
+  const customer = await getOrCreateStripeCustomer(userId);
+  const session = await getStripe().checkout.sessions.create({
+    mode: "subscription",
+    customer,
+    managed_payments: { enabled: false },
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: CURRENCY,
+          unit_amount: SUBSCRIPTION_PRICE_CENTS,
+          recurring: { interval: "month" },
+          product_data: { name: "StoryKeep Life Story (monthly)" },
+        },
+      },
+    ],
+    // Copied onto the subscription, so its webhooks can find our user even
+    // before the customer id is stored.
+    subscription_data: { metadata: { userId } },
+    success_url: `${appUrl()}/billing?checkout=success`,
+    cancel_url: `${appUrl()}/billing?checkout=cancelled`,
+  });
+  if (!session.url) throw new Error("Stripe returned no checkout URL");
+  return { status: "redirect", url: session.url };
+}
+
+let portalConfigurationId: string | undefined;
+
+// The Customer Portal needs a saved configuration. Create ours once through
+// the API, so setup does not depend on clicking in the Stripe dashboard.
+async function getPortalConfiguration(): Promise<string> {
+  if (portalConfigurationId) return portalConfigurationId;
+  const stripe = getStripe();
+
+  const existing = await stripe.billingPortal.configurations.list({ limit: 100 });
+  const ours = existing.data.find(
+    (config) => config.active && config.metadata?.app === "storykeep",
+  );
+  const config =
+    ours ??
+    (await stripe.billingPortal.configurations.create({
+      metadata: { app: "storykeep" },
+      business_profile: { headline: "Manage your StoryKeep subscription" },
+      features: {
+        payment_method_update: { enabled: true },
+        invoice_history: { enabled: true },
+        subscription_cancel: { enabled: true, mode: "at_period_end" },
+      },
+    }));
+  portalConfigurationId = config.id;
+  return config.id;
+}
+
+/**
+ * A link to Stripe's Customer Portal, where the user updates their card or
+ * cancels. Null if the user has never been a Stripe customer.
+ */
+export async function createPortalUrl(userId: string): Promise<string | null> {
+  const [user] = await getDb().select().from(users).where(eq(users.id, userId));
+  if (!user?.stripeCustomerId) return null;
+
+  const session = await getStripe().billingPortal.sessions.create({
+    customer: user.stripeCustomerId,
+    configuration: await getPortalConfiguration(),
+    return_url: `${appUrl()}/billing`,
+  });
+  return session.url;
 }

@@ -272,6 +272,15 @@ describe("Stripe subscription and dunning", () => {
       expect(await runNextJob(handlers)).toBeNull(); // nothing left to send
     });
 
+    it("a worker that does not know the email job leaves it for one that does", async () => {
+      await deliver([...signup, ...renewalFails]);
+
+      // An old worker, deployed before emails existed: no email handler.
+      expect(await runNextJob({})).toBeNull();
+      const [job] = await getDb().select().from(jobs).where(eq(jobs.type, SEND_EMAIL));
+      expect(job).toMatchObject({ status: "queued", attempts: 0 });
+    });
+
     it("an SMTP failure is retried by the queue", async () => {
       await deliver([...signup, ...renewalFails]);
       const handlers = {

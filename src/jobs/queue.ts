@@ -1,4 +1,4 @@
-import { and, asc, eq, lt, lte, or } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, lte, or } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { jobs } from "@/db/schema";
 
@@ -47,8 +47,15 @@ export function backoffMs(attempts: number): number {
  * FOR UPDATE SKIP LOCKED is what makes several workers safe: a row another
  * worker is claiming is skipped, not waited on, so two workers never take the
  * same job.
+ *
+ * `types` limits the claim to job types this worker can handle. During a
+ * deploy an old worker and a new one run side by side. Without this, the old
+ * worker would take a job type it has never heard of and fail it.
  */
-export async function claimNextJob(now: Date): Promise<Job | null> {
+export async function claimNextJob(
+  now: Date,
+  types?: string[],
+): Promise<Job | null> {
   const staleBefore = new Date(now.getTime() - STALE_LOCK_MS);
 
   return getDb().transaction(async (tx) => {
@@ -58,10 +65,13 @@ export async function claimNextJob(now: Date): Promise<Job | null> {
         .select()
         .from(jobs)
         .where(
-          or(
-            and(eq(jobs.status, "queued"), lte(jobs.runAt, now)),
-            // A worker died while holding this job. Take it back.
-            and(eq(jobs.status, "running"), lt(jobs.lockedAt, staleBefore)),
+          and(
+            types ? inArray(jobs.type, types) : undefined,
+            or(
+              and(eq(jobs.status, "queued"), lte(jobs.runAt, now)),
+              // A worker died while holding this job. Take it back.
+              and(eq(jobs.status, "running"), lt(jobs.lockedAt, staleBefore)),
+            ),
           ),
         )
         .orderBy(asc(jobs.runAt))

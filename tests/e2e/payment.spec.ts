@@ -1,6 +1,7 @@
 import type { ChildProcess } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { createStory, register } from "./helpers";
+import { payOnStripeCheckout } from "./stripe";
 import { startMockWorker } from "./worker";
 
 // This test pays on Stripe's real hosted Checkout page, in TEST MODE, with
@@ -38,20 +39,10 @@ test("one-time payment: pay $9 on Stripe Checkout, webhook unlocks one eulogy dr
   await page.screenshot({ path: "docs/evidence/m4-1-before-payment.png", fullPage: true });
   await main.getByRole("button", { name: "Pay $9 with Stripe" }).click();
 
-  // Stripe's hosted page. 4242 4242 4242 4242 is Stripe's "always succeeds" test card.
-  await page.waitForURL(/checkout\.stripe\.com/);
-  await expect(page.getByText("$9.00").first()).toBeVisible({ timeout: 30_000 });
-  const cardOption = page.locator('[data-testid="card-accordion-item-button"]');
-  if (await cardOption.count()) await cardOption.click();
-  await page.locator("#cardNumber").fill("4242 4242 4242 4242");
-  await page.locator("#cardExpiry").fill("12 / 34");
-  await page.locator("#cardCvc").fill("123");
-  await page.locator("#billingName").fill("Gina Test");
-  const postalCode = page.locator("#billingPostalCode");
-  if (await postalCode.isVisible()) await postalCode.fill("10001");
-  // No screenshot here: Stripe's page renders as blank placeholders in a
-  // headless screenshot.
-  await page.locator('[data-testid="hosted-payment-submit-button"]').click();
+  // Stripe's hosted page. 4242 4242 4242 4242 is Stripe's "always succeeds"
+  // test card. (No screenshot: Stripe's page renders as blank placeholders
+  // in a headless screenshot.)
+  await payOnStripeCheckout(page);
 
   // Back in the app. The unlock appears only once the webhook has arrived.
   await page.waitForURL(new RegExp(`${storyPath}\\?checkout=success`), { timeout: 60_000 });

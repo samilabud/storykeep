@@ -24,3 +24,4 @@ export function appUrl(): string {
 
 export const EULOGY_PRICE_CENTS = 900;
 export const CURRENCY = "usd";
+export const SUBSCRIPTION_PRICE_CENTS = 700;
