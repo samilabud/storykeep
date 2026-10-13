@@ -382,3 +382,23 @@ use, so setup needs no clicking in the dashboard.
 - No proration or plan changes. There is one plan.
 - No reconcile job yet. It is described above, not built.
 - Download gating by subscription comes with the export in M6.
+
+## Deploy: Vercel without a worker process
+
+**The queue does not care who drives it.** Vercel cannot keep `pnpm worker`
+alive. So on Vercel the app calls `runPendingJobs()` itself, after the
+response is sent (`after()` from Next.js): right after a draft is queued,
+after a webhook that may have queued an email, and on each refresh of a story
+page that is waiting for a draft. A daily cron route is the safety net. The
+`jobs` table, `SKIP LOCKED`, retries and idempotency keys are unchanged. Two
+drivers at once are safe for the same reason two workers are.
+
+**Inline runs happen only on Vercel** (`process.env.VERCEL`). Locally the
+worker process stays the single driver, which keeps "close the page and the
+draft still arrives" an honest test.
+
+**The cron route needs a secret.** It answers 401 without
+`Authorization: Bearer <CRON_SECRET>`, and also when no secret is set at all.
+
+**Trade-offs** are listed in `docs/DEPLOY.md`: a job must fit in one function
+run, and a retry waits for the next trigger.

@@ -24,6 +24,20 @@ export function createSmtpMailer(): Mailer {
 }
 
 /**
+ * The mailer for this environment. With no SMTP_URL on a deployed host there
+ * is nowhere to send mail, so the email is written to the log instead of
+ * failing the job. Locally the default is Mailpit on port 1025.
+ */
+export function createMailer(): Mailer {
+  if (!process.env.SMTP_URL && process.env.VERCEL) {
+    return async (email) => {
+      console.log(`[email] (no SMTP configured) to=${email.to} subject="${email.subject}"`);
+    };
+  }
+  return createSmtpMailer();
+}
+
+/**
  * Delivery is at-least-once, like every job. If the worker dies right after
  * the SMTP server accepted the mail, the retry sends it a second time. For a
  * "payment failed" notice that is acceptable. It is not acceptable to lose it.

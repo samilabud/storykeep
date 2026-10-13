@@ -1,11 +1,13 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { after } from "next/server";
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/auth/guards";
 import { startEulogyCheckout } from "@/billing/checkout";
 import { saveAnswer } from "@/questionnaire/data";
 import { isQuestionKey } from "@/questionnaire/questions";
+import { runPendingJobsQuietly } from "@/jobs/run";
 import { requestDraft } from "@/stories/drafts";
 import { restoreVersion, saveVersion } from "@/stories/versions";
 
@@ -69,6 +71,11 @@ export async function requestDraftAction(storyId: string) {
   // This returns as soon as the job row is saved. The worker writes the draft.
   const result = await requestDraft(userId, storyId);
   if (!result) notFound();
+
+  // Where there is no worker process (a serverless host), start the job
+  // after this response is sent. With a worker running this is harmless:
+  // whoever claims the job first runs it, and the other finds nothing.
+  if (process.env.VERCEL) after(runPendingJobsQuietly);
 
   // Go to the clean URL. This drops ?checkout=success, which only matters
   // while the page waits for the payment webhook.

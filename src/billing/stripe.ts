@@ -18,8 +18,14 @@ export function getStripe(): Stripe {
   return client;
 }
 
+/** The public address of the app, used in Stripe return URLs and emails. */
 export function appUrl(): string {
-  return process.env.APP_URL ?? "http://localhost:3100";
+  if (process.env.APP_URL) return process.env.APP_URL;
+  // Set by Vercel on every deployment: the project's production domain.
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  return "http://localhost:3100";
 }
 
 export const EULOGY_PRICE_CENTS = 900;

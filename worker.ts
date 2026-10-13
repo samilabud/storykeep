@@ -15,7 +15,7 @@ async function main() {
   const { createGenerateDraftHandler, GENERATE_DRAFT } = await import(
     "@/jobs/handlers/generate-draft"
   );
-  const { createSendEmailHandler, createSmtpMailer } = await import(
+  const { createMailer, createSendEmailHandler } = await import(
     "@/jobs/handlers/send-email"
   );
   const { SEND_EMAIL } = await import("@/email/outbox");
@@ -25,7 +25,7 @@ async function main() {
   const llm = await getLlmProvider();
   const handlers = {
     [GENERATE_DRAFT]: createGenerateDraftHandler(llm),
-    [SEND_EMAIL]: createSendEmailHandler(createSmtpMailer()),
+    [SEND_EMAIL]: createSendEmailHandler(createMailer()),
   };
   console.log(`[worker] started, LLM provider: ${llm.name}`);
 

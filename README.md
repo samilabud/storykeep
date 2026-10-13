@@ -48,5 +48,6 @@ The LLM is a mock by default (`LLM_PROVIDER=mock`), so no API key is needed.
 ## Docs
 
 - [docs/DECISIONS.md](docs/DECISIONS.md): what was chosen and why
+- [docs/DEPLOY.md](docs/DEPLOY.md): deploying to Vercel and Neon for free
 - [docs/evidence/](docs/evidence/): proof for each claim
 - [docs/evidence/dunning.md](docs/evidence/dunning.md): the failed-renewal timeline from real Stripe test clocks

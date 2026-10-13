@@ -1,6 +1,10 @@
+import { after } from "next/server";
 import type Stripe from "stripe";
 import { processStripeEvent } from "@/billing/events";
 import { getStripe } from "@/billing/stripe";
+import { runPendingJobsQuietly } from "@/jobs/run";
+
+export const maxDuration = 60;
 
 /**
  * Stripe calls this URL. Anyone on the internet can call it too, so the
@@ -30,6 +34,10 @@ export async function POST(request: Request) {
 
   try {
     const result = await processStripeEvent(event);
+    // The event may have queued an email. Where there is no worker process
+    // (a serverless host), send it after replying to Stripe, so a slow mail
+    // server cannot make the webhook time out.
+    if (process.env.VERCEL) after(runPendingJobsQuietly);
     // 200 for a duplicate too: Stripe should stop retrying it.
     return Response.json({ received: true, result });
   } catch (error) {

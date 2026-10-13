@@ -7,7 +7,9 @@ function createDb() {
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set. Copy .env.example to .env.local.");
   }
-  const pool = new Pool({ connectionString });
+  // A serverless host runs many small copies of the app. Keep each copy's
+  // pool small so together they do not use up the database's connections.
+  const pool = new Pool({ connectionString, max: process.env.VERCEL ? 3 : 10 });
   return drizzle(pool, { schema });
 }
 

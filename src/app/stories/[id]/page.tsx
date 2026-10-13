@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { after } from "next/server";
 import { Suspense } from "react";
 import { requireStoryOwner } from "@/auth/guards";
 import { getEulogyPayment } from "@/billing/orders";
 import { getSubscriptionView } from "@/billing/subscriptions";
+import { runPendingJobsQuietly } from "@/jobs/run";
 import { getCurrentAnswers } from "@/questionnaire/data";
 import { nextQuestionKey, QUESTIONS } from "@/questionnaire/questions";
 import { draftFailureMessage, getLatestDraftJob } from "@/stories/drafts";
@@ -15,6 +17,10 @@ import {
 import { AutoRefresh } from "./auto-refresh";
 
 const SOURCE_LABEL = { llm_draft: "AI draft", user_edit: "Your edit" } as const;
+
+// Server Actions of this page (and `after` work) may run this long. An LLM
+// draft takes a few seconds.
+export const maxDuration = 60;
 
 type Props = PageProps<"/stories/[id]">;
 
@@ -51,6 +57,11 @@ async function StoryDetail({ params, searchParams }: Props) {
   const drafting =
     draftJob?.status === "queued" || draftJob?.status === "running";
   const draftError = draftJob ? draftFailureMessage(draftJob) : null;
+
+  // No worker process on a serverless host. While a draft is waiting, the
+  // page refreshes every 2 seconds, and each refresh gives the queue a push.
+  // This picks up a retry after its backoff delay.
+  if (drafting && process.env.VERCEL) after(runPendingJobsQuietly);
   const hasDraft = versions?.some((v) => v.source === "llm_draft") ?? false;
 
   // A eulogy needs a paid, unused order. A failed job may be retried for
