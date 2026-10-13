@@ -173,7 +173,8 @@ describe("Stripe subscription and dunning", () => {
       expect(await canDraft(date(T0 + MONTH + 8 * DAY))).toBe("subscription_required");
 
       const subjects = (await emailJobs()).map((email) => email.subject);
-      expect(subjects.filter((s) => s.includes("did not go through"))).toHaveLength(3);
+      // Three failed attempts on one invoice, but one "payment failed" email.
+      expect(subjects.filter((s) => s.includes("did not go through"))).toHaveLength(1);
       expect(subjects.filter((s) => s.includes("has ended"))).toHaveLength(1);
     });
 
@@ -252,11 +253,25 @@ describe("Stripe subscription and dunning", () => {
       expect(await emailJobs()).toHaveLength(1);
     });
 
-    it("two different events for the same failed attempt still send one email", async () => {
-      // Different event ids pass the events table. The email's own key
-      // (invoice id + attempt number) is the second guard.
-      await deliver([...signup, failed(T0 + MONTH, 1), failed(T0 + MONTH + 1, 1)]);
+    it("later failed retries of the same invoice do not send more emails", async () => {
+      // Different event ids pass the events table. The email's own key (the
+      // invoice id) is the second guard.
+      await deliver([...signup, failed(T0 + MONTH, 1), failed(T0 + MONTH + 2 * DAY, 2)]);
       expect(await emailJobs()).toHaveLength(1);
+    });
+
+    it("a failure on a later invoice (another month) sends a new email", async () => {
+      await deliver([
+        ...signup,
+        ...renewalFails,
+        ...retrySucceeds,
+        invoiceEvent("payment_failed", {
+          customerId: CUSTOMER,
+          at: T0 + 2 * MONTH,
+          invoiceId: "in_test_2",
+        }),
+      ]);
+      expect(await emailJobs()).toHaveLength(2);
     });
 
     it("the worker sends the queued email", async () => {

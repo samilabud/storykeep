@@ -144,11 +144,13 @@ export async function onInvoicePaymentFailed(
   if (!next) return;
   await saveState(tx, user.id, next);
 
-  // One email per failed attempt. Stripe's attempt counter is in the key, so
-  // a replayed event cannot queue the same email twice.
+  // One email per failed invoice, sent at the first failure. Stripe retried
+  // this invoice 8 more times over two weeks in the test-clock run. An email
+  // for each retry would be 9 emails about one problem. The invoice id is the
+  // key, so later failures and replayed events queue nothing new.
   await queueEmail(
     tx,
-    `email:payment-failed:${invoice.id}:${invoice.attempt_count}`,
+    `email:payment-failed:${invoice.id}`,
     paymentFailedEmail(user.email, next.graceUntil!),
   );
 }
