@@ -201,7 +201,7 @@ describe("subscription state machine: out of order", () => {
     ["signup, failed renewal", [...signup, ...renewalFails], "past_due"],
     ["signup, failed renewal, retry succeeds", [...signup, ...renewalFails, ...retrySucceeds], "active"],
     ["failed renewal, then final failure", [snap("created", "active", 0, MONTH), ...renewalFails, ...finalFailure], "canceled"],
-  ] as const)("%s: every arrival order ends %s", (_name, events, expected) => {
+  ] as const)("%s: every arrival order ends in the right state", (_name, events, expected) => {
     const orders = permutations([...events]);
     const wrong = orders
       .filter((order) => run(order)?.status !== expected)

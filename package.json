@@ -17,11 +17,14 @@
     "stripe:listen": "sh -c 'set -a; . ./.env.local; set +a; stripe listen --api-key \"$STRIPE_SECRET_KEY\" --forward-to localhost:3100/api/stripe/webhook'",
     "test:e2e:stripe": "STRIPE_E2E=1 playwright test payment subscription",
     "test:e2e:dunning": "STRIPE_E2E=1 playwright test dunning",
-    "test:e2e:deployed": "playwright test deployed"
+    "test:e2e:deployed": "playwright test deployed",
+    "samples": "tsx scripts/make-samples.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
+    "@react-pdf/renderer": "^4.9.0",
     "bcryptjs": "^3.0.3",
+    "docx": "^9.11.0",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.0",
     "next-auth": "5.0.0-beta.32",
@@ -44,10 +47,13 @@
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
+    "jszip": "^3.10.2",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
+    "unpdf": "^1.8.1",
     "vitest": "^5.0.4"
   },
-  "packageManager": "pnpm@10.32.1"
+  "packageManager": "pnpm@10.32.1",
+  "type": "module"
 }

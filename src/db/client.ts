@@ -7,9 +7,17 @@ function createDb() {
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set. Copy .env.example to .env.local.");
   }
+  // Hosted Postgres URLs often say "sslmode=require". The pg driver treats
+  // that as full certificate verification today and warns that this will
+  // change. Asking for "verify-full" by name keeps today's (strict)
+  // behaviour and keeps the logs clean.
+  const url = connectionString.replace(
+    /sslmode=(require|prefer|verify-ca)\b/,
+    "sslmode=verify-full",
+  );
   // A serverless host runs many small copies of the app. Keep each copy's
   // pool small so together they do not use up the database's connections.
-  const pool = new Pool({ connectionString, max: process.env.VERCEL ? 3 : 10 });
+  const pool = new Pool({ connectionString: url, max: process.env.VERCEL ? 3 : 10 });
   return drizzle(pool, { schema });
 }
 

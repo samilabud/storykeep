@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { createStory, register } from "./helpers";
 import { payOnStripeCheckout } from "./stripe";
@@ -40,4 +41,19 @@ test("deployed: register, pay $9 in test mode, webhook unlocks, draft is written
   });
   await expect(main.getByLabel("Story text")).toHaveValue(/Joe/);
   await page.screenshot({ path: "docs/evidence/deployed-smoke.png", fullPage: true });
+
+  // The paid story can be downloaded. On a serverless host this also proves
+  // that the PDF font files were shipped with the export route.
+  for (const [linkName, magic] of [
+    ["Download PDF", "%PDF-"],
+    ["Download Word (DOCX)", "PK"],
+  ] as const) {
+    const [file] = await Promise.all([
+      page.waitForEvent("download"),
+      main.getByRole("link", { name: linkName }).click(),
+    ]);
+    const bytes = readFileSync(await file.path());
+    expect(bytes.subarray(0, magic.length).toString()).toBe(magic);
+    expect(bytes.length).toBeGreaterThan(5000);
+  }
 });

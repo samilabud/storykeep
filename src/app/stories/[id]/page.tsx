@@ -2,6 +2,7 @@ import Link from "next/link";
 import { after } from "next/server";
 import { Suspense } from "react";
 import { requireStoryOwner } from "@/auth/guards";
+import { canExportStory } from "@/billing/entitlement";
 import { getEulogyPayment } from "@/billing/orders";
 import { getSubscriptionView } from "@/billing/subscriptions";
 import { runPendingJobsQuietly } from "@/jobs/run";
@@ -41,12 +42,13 @@ async function StoryDetail({ params, searchParams }: Props) {
   const { id } = await params;
   const { checkout } = await searchParams;
   const story = await requireStoryOwner(id);
-  const [answers, versions, draftJob, eulogyPayment, subscription] = await Promise.all([
+  const [answers, versions, draftJob, eulogyPayment, subscription, canExport] = await Promise.all([
     getCurrentAnswers(story.userId, story.id),
     listVersions(story.userId, story.id),
     getLatestDraftJob(story.userId, story.id),
     story.kind === "eulogy" ? getEulogyPayment(story.userId, story.id) : null,
     story.kind === "life_story" ? getSubscriptionView(story.userId) : null,
+    canExportStory(story),
   ]);
 
   const handled = answers?.size ?? 0;
@@ -212,6 +214,37 @@ async function StoryDetail({ params, searchParams }: Props) {
           </button>
         </form>
       </section>
+
+      {current && (
+        <section className="mt-8 rounded border border-zinc-200 p-4 dark:border-zinc-800">
+          <h2 className="text-lg font-medium">Download</h2>
+          {canExport ? (
+            <>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                The current version (version {current.versionNo}) as a file.
+              </p>
+              <div className="mt-3 flex gap-3">
+                {(["pdf", "docx"] as const).map((format) => (
+                  // A plain link, not <Link>: this is a file download, not a page.
+                  <a
+                    key={format}
+                    href={`/api/stories/${story.id}/export?format=${format}`}
+                    className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+                  >
+                    Download {format === "pdf" ? "PDF" : "Word (DOCX)"}
+                  </a>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              {story.kind === "eulogy"
+                ? "Downloads are unlocked when the eulogy is paid for."
+                : "Downloads are part of the subscription."}
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="mt-8">
         <h2 className="text-lg font-medium">Version history</h2>
