@@ -402,3 +402,98 @@ draft still arrives" an honest test.
 
 **Trade-offs** are listed in `docs/DEPLOY.md`: a job must fit in one function
 run, and a retry waits for the next trigger.
+
+## M6. PDF and DOCX export
+
+**One content model, two renderers.** `parseStory()` turns the stored text
+into a small object: title, intro paragraphs, sections with a heading and
+paragraphs. The PDF renderer and the DOCX renderer both read that object and
+never the raw text. So the two files cannot disagree about what a heading is.
+
+**Shared numbers, not shared code.** PDF and Word are different engines, so
+the renderers are separate. But both read the same sizes from
+`src/export/typography.ts`: 28pt title, 15pt headings, 11.5pt body, 1 inch
+margins, US Letter paper.
+
+**PDF: `@react-pdf/renderer`, not a headless browser.** It is pure Node, so it
+runs in a serverless function. HTML-to-PDF with Chromium gives finer CSS
+control, but Chromium is about 150 MB and slow to start, which is a poor fit
+for Vercel. Trade-off: react-pdf has its own layout engine with its own bugs
+(two of them are listed below).
+
+**DOCX: the `docx` library.** It writes real Word structure: heading styles,
+a footer with Word's PAGE field, sections. A reader can change the styles in
+Word, and Word's outline and screen readers see the headings.
+
+**The PDF embeds its font (DejaVu Serif).** The built-in PDF fonts cover only
+Western European letters. An embedded Unicode font prints `Łódź` and
+`Dvořák` correctly and looks the same on every computer. The three font files
+are in the repository with their license.
+
+**The DOCX names a font (Georgia) and does not embed it.** That is how Word
+files normally work: Word uses the font installed on the reader's computer.
+Georgia ships with Windows and macOS. So the two files share sizes and
+spacing, but not the exact typeface. That is a deliberate difference.
+
+**Page breaks: no orphan headings.**
+- PDF: the heading and its first paragraph are wrapped in one block that
+  cannot be split (`wrap={false}`). If the pair does not fit, both move to the
+  next page.
+- DOCX: each heading has `keepNext`, Word's "keep with next paragraph" flag.
+- Both: paragraphs use widow and orphan control, so a single line is never
+  left alone on a page.
+
+**Page numbers.** The cover has none. The body starts at 1. In the DOCX the
+cover is its own section without a footer. In the PDF the number is drawn on
+every body page as "page index minus one".
+
+**Emoji fallback.** The PDF font has no emoji, and an emoji would print as an
+empty box. The PDF renderer removes emoji and tidies the space they leave.
+The DOCX keeps them, because Word has an emoji font. This is the one place
+where the two files differ in content, on purpose.
+
+**The export route checks four things in order.** Signed in (401), owns the
+story (404), has paid (402), has text (409). The download links are hidden
+when the user has not paid, but hiding a link is not security: the route
+refuses the request itself, and a test calls it directly.
+
+**What counts as paid.** A eulogy: a paid order for that story, used or not.
+A life story: a subscription with access right now, including the grace
+period.
+
+**The file is built on each request and never stored.** No file storage to
+manage or secure. The response says `Cache-Control: private, no-store`.
+Trade-off: each download costs CPU time. For large documents or heavy traffic
+I would build the file in a background job and store it.
+
+**Tests read the files back.** A test that only checks "a file was returned"
+proves little. The PDF tests extract the text of each page. The DOCX tests
+unzip the file and read its XML. The browser test downloads both files
+through the real UI and opens them.
+
+### What broke first
+
+- **Page numbers vanished from the PDF.** A `lineHeight` set on the page style
+  makes react-pdf 4.9 drop the dynamic page-number text. Found by reading the
+  page text back: no page ended in a number. Fix: set the line height on the
+  paragraph style.
+- **A heading sat alone at the bottom of a page.** react-pdf's
+  `minPresenceAhead` is meant to prevent this and did not. Fix: the
+  unbreakable heading-plus-paragraph block.
+- **My first orphan test could not fail.** With the sample story, no heading
+  happened to land at a page bottom, so the test passed with the fix removed.
+  The real test now pushes a heading down the page one line at a time across
+  the page boundary, and it fails when the fix is removed.
+- **Line spacing came out double.** DejaVu's own line spacing is already about
+  1.5 times the font size, and react-pdf multiplies it. The PDF uses a factor
+  of 1 to match 1.5 spacing in Word.
+- **The PDF library is ESM-only.** It would not load from a CommonJS script.
+  The project is now marked `"type": "module"`.
+
+### Cut or postponed
+
+- No bold or italics inside paragraphs. Markdown marks are removed.
+- No images, no table of contents.
+- Only US Letter. A4 would be a one-line setting.
+- Right-to-left and Asian scripts are not handled. DejaVu Serif covers Latin,
+  Greek and Cyrillic.
