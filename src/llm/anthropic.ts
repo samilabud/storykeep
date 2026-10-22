@@ -1,8 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { costCents } from "./pricing";
-import { buildDraftPrompt } from "./prompt";
+import { buildAssistantSystemPrompt, buildDraftPrompt } from "./prompt";
 import {
   LlmError,
+  type ChatRequest,
+  type ChatResult,
   type DraftRequest,
   type DraftResult,
   type LlmProvider,
@@ -16,8 +18,11 @@ const DEFAULT_MODEL = "claude-haiku-5-5";
 // model families that support it.
 const supportsFallback = (model: string) => !model.startsWith("claude-haiku");
 
-/** The one SDK method this provider uses. Tests pass a fake with this shape. */
-type MessagesClient = Pick<Anthropic["beta"]["messages"], "create">;
+/** The SDK methods this provider uses. Tests pass a fake with this shape. */
+type MessagesClient = Pick<Anthropic["beta"]["messages"], "create" | "stream">;
+
+// A chat reply is short. This caps the cost of one reply.
+const CHAT_MAX_TOKENS = 4000;
 
 export class AnthropicLlmProvider implements LlmProvider {
   readonly name = "anthropic";
@@ -79,6 +84,54 @@ export class AnthropicLlmProvider implements LlmProvider {
       provider: this.name,
       // response.model is the model that really answered. With a fallback it
       // can differ from the one we asked for, and so can the price.
+      model: response.model,
+      inputTokens: input_tokens,
+      outputTokens: output_tokens,
+      costCents: costCents(response.model, input_tokens, output_tokens),
+    };
+  }
+
+  async streamChat(
+    request: ChatRequest,
+    onText: (text: string) => void,
+  ): Promise<ChatResult> {
+    let response: Anthropic.Beta.BetaMessage;
+    try {
+      const stream = this.messages.stream({
+        model: this.model,
+        max_tokens: CHAT_MAX_TOKENS,
+        // Chat does well at low effort, and the user is waiting.
+        output_config: { effort: "low" },
+        system: buildAssistantSystemPrompt(request),
+        messages: request.turns,
+        ...(supportsFallback(this.model)
+          ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
+          : {}),
+      });
+      for await (const event of stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          onText(event.delta.text);
+        }
+      }
+      response = await stream.finalMessage();
+    } catch (error) {
+      throw toLlmError(error);
+    }
+
+    if (response.stop_reason === "refusal") {
+      throw new LlmError("LLM_REFUSED", "The model declined this request", false);
+    }
+
+    // A reply cut off at max_tokens is still useful in a chat, so keep it.
+    const text = response.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("");
+
+    const { input_tokens, output_tokens } = response.usage;
+    return {
+      text,
+      provider: this.name,
       model: response.model,
       inputTokens: input_tokens,
       outputTokens: output_tokens,

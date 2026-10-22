@@ -3,17 +3,23 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireStoryOwner } from "@/auth/guards";
 import { getVersion } from "@/stories/versions";
+import { SiteHeader } from "@/app/site-header";
+import { SubmitButton } from "@/app/submit-button";
+import { backLink, buttonPrimary, card, muted, pageTitle } from "@/app/ui";
 import { restoreVersionAction } from "../../actions";
 
 type Props = PageProps<"/stories/[id]/versions/[versionNo]">;
 
 export default function VersionPage({ params }: Props) {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10">
-      <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
-        <VersionDetail params={params} />
-      </Suspense>
-    </main>
+    <>
+      <SiteHeader variant="app" />
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+        <Suspense fallback={<p className={muted}>Loading…</p>}>
+          <VersionDetail params={params} />
+        </Suspense>
+      </main>
+    </>
   );
 }
 
@@ -27,18 +33,18 @@ async function VersionDetail({ params }: Pick<Props, "params">) {
 
   return (
     <>
-      <Link href={`/stories/${story.id}`} className="text-sm underline">
+      <Link href={`/stories/${story.id}`} className={backLink}>
         ← {story.title}
       </Link>
-      <h1 className="mt-4 text-2xl font-semibold">
+      <h1 className={`mt-4 ${pageTitle}`}>
         Version {version.versionNo}
       </h1>
-      <p className="mt-1 text-sm text-zinc-500">
+      <p className={`mt-1 ${muted}`}>
         {version.source === "llm_draft" ? "AI draft" : "Your edit"}
         {isCurrent && " · current"}
       </p>
 
-      <article className="mt-6 whitespace-pre-wrap rounded border border-zinc-200 p-4 dark:border-zinc-800">
+      <article className={`${card} mt-6 font-display text-[1.05rem] leading-relaxed whitespace-pre-wrap`}>
         {version.content}
       </article>
 
@@ -47,12 +53,10 @@ async function VersionDetail({ params }: Pick<Props, "params">) {
           action={restoreVersionAction.bind(null, story.id, version.versionNo)}
           className="mt-4"
         >
-          <button
-            type="submit"
-            className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-          >
-            Restore this version
-          </button>
+          <p className={`mb-3 ${muted}`}>
+            Restoring copies this text into a new version. Nothing is lost.
+          </p>
+          <SubmitButton className={buttonPrimary}>Restore this version</SubmitButton>
         </form>
       )}
     </>

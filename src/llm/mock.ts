@@ -1,5 +1,7 @@
 import {
   LlmError,
+  type ChatRequest,
+  type ChatResult,
   type DraftRequest,
   type DraftResult,
   type LlmProvider,
@@ -53,6 +55,38 @@ export class MockLlmProvider implements LlmProvider {
       "",
       ...sections,
     ].join("\n");
+
+    return {
+      text,
+      provider: this.name,
+      model: "mock-1",
+      inputTokens: Math.ceil(JSON.stringify(request).length / 4),
+      outputTokens: Math.ceil(text.length / 4),
+      costCents: this.options.costCents ?? 1,
+    };
+  }
+
+  async streamChat(
+    request: ChatRequest,
+    onText: (text: string) => void,
+  ): Promise<ChatResult> {
+    this.calls += 1;
+    if (this.failuresLeft > 0) {
+      this.failuresLeft -= 1;
+      throw (
+        this.options.error ??
+        new LlmError("LLM_UNAVAILABLE", "Mock model is overloaded", true)
+      );
+    }
+
+    const question = request.turns.at(-1)?.content ?? "";
+    const text = [
+      `[Mock assistant] You asked: "${question}"`,
+      `This story has ${request.answers.length} answered questions and ${request.openQuestions.length} still open.`,
+    ].join("\n\n");
+
+    // Word by word, so the streaming path in the UI gets real exercise.
+    for (const piece of text.match(/\S+\s*/g) ?? []) onText(piece);
 
     return {
       text,

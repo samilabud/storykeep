@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { SiteHeader } from "@/app/site-header";
+import { buttonPrimary, card, field, muted, textLink } from "@/app/ui";
 import type { AuthFormState } from "./actions";
 
 type Props = {
@@ -14,56 +16,75 @@ export function AuthForm({ mode, action }: Props) {
   const isLogin = mode === "login";
 
   return (
-    <main className="mx-auto w-full max-w-sm px-4 py-16">
-      <h1 className="text-2xl font-semibold">
-        {isLogin ? "Sign in" : "Create your account"}
-      </h1>
-
-      <form action={formAction} className="mt-6 flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          Email
-          <input
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            defaultValue={state?.email}
-            className="rounded border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Password
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete={isLogin ? "current-password" : "new-password"}
-            className="rounded border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
-          />
-        </label>
-
-        {state?.error && (
-          <p role="alert" className="text-sm text-red-600">
-            {state.error}
+    <>
+      <SiteHeader variant="public" />
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-12 sm:py-20">
+        <div className={card}>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            {isLogin ? "Sign in" : "Create your account"}
+          </h1>
+          <p className={`mt-2 ${muted}`}>
+            {isLogin
+              ? "Welcome back. Your stories are where you left them."
+              : "Start a life story or a eulogy in a few minutes."}
           </p>
-        )}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded bg-zinc-900 px-4 py-2 font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          {isLogin ? "Sign in" : "Create account"}
-        </button>
-      </form>
+          <form action={formAction} className="mt-6 flex flex-col gap-4">
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Email
+              <input
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                defaultValue={state?.email}
+                className={field}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Password
+              <input
+                name="password"
+                type="password"
+                required
+                minLength={8}
+                autoComplete={isLogin ? "current-password" : "new-password"}
+                className={field}
+              />
+              {!isLogin && (
+                <span className="font-normal text-muted">At least 8 characters.</span>
+              )}
+            </label>
 
-      <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-        {isLogin ? "No account yet? " : "Already have an account? "}
-        <Link href={isLogin ? "/register" : "/login"} className="underline">
-          {isLogin ? "Create one" : "Sign in"}
-        </Link>
-      </p>
-    </main>
+            {state?.error && (
+              <p
+                role="alert"
+                className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300"
+              >
+                {state.error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={pending}
+              className={`${buttonPrimary} py-2.5 text-base`}
+            >
+              {isLogin ? "Sign in" : "Create account"}
+            </button>
+          </form>
+
+          <p className={`mt-6 ${muted}`}>
+            {isLogin ? "No account yet? " : "Already have an account? "}
+            <Link
+              href={isLogin ? "/register" : "/login"}
+              className={`${textLink} text-ink`}
+            >
+              {isLogin ? "Create one" : "Sign in"}
+            </Link>
+          </p>
+        </div>
+      </main>
+    </>
   );
 }

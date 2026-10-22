@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 import { backoffMs } from "@/jobs/queue";
 import { AnthropicLlmProvider } from "@/llm/anthropic";
 import { costCents } from "@/llm/pricing";
-import { buildDraftPrompt } from "@/llm/prompt";
-import { LlmError, type DraftRequest } from "@/llm/provider";
+import { MockLlmProvider } from "@/llm/mock";
+import { buildAssistantSystemPrompt, buildDraftPrompt } from "@/llm/prompt";
+import { LlmError, type ChatRequest, type DraftRequest } from "@/llm/provider";
 
 const request: DraftRequest = {
   kind: "eulogy",
@@ -22,6 +23,14 @@ type Create = ConstructorParameters<typeof AnthropicLlmProvider>[0] extends
     : never
   : never;
 
+type Stream = ConstructorParameters<typeof AnthropicLlmProvider>[0] extends
+  | { messages?: infer M }
+  | undefined
+  ? M extends { stream: infer S }
+    ? S
+    : never
+  : never;
+
 function providerReturning(
   response: object,
   seen?: { params?: unknown },
@@ -31,14 +40,22 @@ function providerReturning(
     if (seen) seen.params = params;
     return response;
   }) as unknown as Create;
-  return new AnthropicLlmProvider({ messages: { create }, model });
+  return new AnthropicLlmProvider({ messages: { create, stream: unusedStream }, model });
 }
+
+// Draft tests never stream.
+const unusedStream = (() => {
+  throw new Error("stream() was not expected");
+}) as unknown as Stream;
 
 function providerThrowing(error: unknown) {
   const create = (async () => {
     throw error;
   }) as unknown as Create;
-  return new AnthropicLlmProvider({ messages: { create }, model: "claude-opus-5-5" });
+  return new AnthropicLlmProvider({
+    messages: { create, stream: unusedStream },
+    model: "claude-opus-5-5",
+  });
 }
 
 const okResponse = {
@@ -134,6 +151,112 @@ describe("Anthropic provider (SDK replaced by a fake)", () => {
   ])("classifies %s as retryable=%s", async (_name, sdkError, retryable) => {
     const error = await errorFrom(providerThrowing(sdkError).generateDraft(request));
     expect(error.retryable).toBe(retryable);
+  });
+});
+
+const chat: ChatRequest = {
+  kind: "life_story",
+  title: "Grandpa Joe",
+  answers: [{ question: "What work did they do?", answer: "Carpenter" }],
+  openQuestions: ["What did they love to do?"],
+  storyText: "Grandpa Joe was a carpenter.",
+  turns: [{ role: "user", content: "Suggest an opening line" }],
+};
+
+/** A fake `messages.stream()`: yields text deltas, then the final message. */
+function providerStreaming(
+  pieces: string[],
+  final: object,
+  seen?: { params?: unknown },
+  model = "claude-opus-5-5",
+) {
+  const stream = ((params: unknown) => {
+    if (seen) seen.params = params;
+    return {
+      async *[Symbol.asyncIterator]() {
+        for (const text of pieces) {
+          yield { type: "content_block_delta", delta: { type: "text_delta", text } };
+        }
+      },
+      finalMessage: async () => final,
+    };
+  }) as unknown as Stream;
+  const create = (async () => {
+    throw new Error("create() was not expected");
+  }) as unknown as Create;
+  return new AnthropicLlmProvider({ messages: { create, stream }, model });
+}
+
+describe("story assistant chat", () => {
+  const finalChat = {
+    model: "claude-opus-5-5",
+    stop_reason: "end_turn",
+    content: [{ type: "text", text: "He built things to last." }],
+    usage: { input_tokens: 1000, output_tokens: 2000 },
+  };
+
+  it("streams the reply piece by piece and reports the cost", async () => {
+    const received: string[] = [];
+    const result = await providerStreaming(
+      ["He built ", "things to last."],
+      finalChat,
+    ).streamChat(chat, (text) => received.push(text));
+    expect(received).toEqual(["He built ", "things to last."]);
+    expect(result).toMatchObject({
+      text: "He built things to last.",
+      inputTokens: 1000,
+      outputTokens: 2000,
+      costCents: 5,
+    });
+  });
+
+  it("sends the whole conversation and grounds the system prompt in the story", async () => {
+    const seen: { params?: unknown } = {};
+    await providerStreaming([], finalChat, seen).streamChat(chat, () => {});
+    const params = seen.params as { system: string; messages: unknown[] };
+    expect(params.messages).toEqual(chat.turns);
+    expect(params.system).toContain("Carpenter");
+    expect(params.system).toContain("What did they love to do?");
+    expect(params.system).toContain("Grandpa Joe was a carpenter.");
+    expect(params.system).toContain("Never invent");
+  });
+
+  it("treats a refusal as an error, even after some text streamed", async () => {
+    const error = await errorFrom(
+      providerStreaming(["Sure"], { ...finalChat, stop_reason: "refusal" }).streamChat(
+        chat,
+        () => {},
+      ),
+    );
+    expect(error).toMatchObject({ code: "LLM_REFUSED", retryable: false });
+  });
+
+  it("asks for a server-side fallback on Opus, but not on Haiku", async () => {
+    const haiku: { params?: unknown } = {};
+    await providerStreaming([], finalChat, haiku, "claude-haiku-5-5").streamChat(chat, () => {});
+    expect(haiku.params).not.toHaveProperty("fallbacks");
+
+    const opus: { params?: unknown } = {};
+    await providerStreaming([], finalChat, opus).streamChat(chat, () => {});
+    expect(opus.params).toMatchObject({ fallbacks: "default" });
+  });
+
+  it("the mock streams a reply without a network call", async () => {
+    const received: string[] = [];
+    const result = await new MockLlmProvider().streamChat(chat, (text) => received.push(text));
+    expect(received.length).toBeGreaterThan(1);
+    expect(received.join("")).toBe(result.text);
+    expect(result.text).toContain("Suggest an opening line");
+  });
+
+  it("says when there are no answers or text yet", () => {
+    const system = buildAssistantSystemPrompt({
+      ...chat,
+      answers: [],
+      storyText: null,
+    });
+    expect(system).toContain("(No answers yet.)");
+    expect(system).toContain("(No story text yet.)");
   });
 });
 

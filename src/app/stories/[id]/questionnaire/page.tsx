@@ -7,17 +7,32 @@ import {
   nextQuestionKey,
   QUESTIONS,
 } from "@/questionnaire/questions";
+import { SiteHeader } from "@/app/site-header";
+import { SubmitButton } from "@/app/submit-button";
+import {
+  backLink,
+  buttonPrimary,
+  buttonSecondary,
+  card,
+  field,
+  muted,
+  sectionTitle,
+  textLink,
+} from "@/app/ui";
 import { saveAnswerAction } from "../actions";
 
 type Props = PageProps<"/stories/[id]/questionnaire">;
 
 export default function QuestionnairePage({ params, searchParams }: Props) {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10">
-      <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
-        <Questionnaire params={params} searchParams={searchParams} />
-      </Suspense>
-    </main>
+    <>
+      <SiteHeader variant="app" />
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+        <Suspense fallback={<p className={muted}>Loading…</p>}>
+          <Questionnaire params={params} searchParams={searchParams} />
+        </Suspense>
+      </main>
+    </>
   );
 }
 
@@ -41,66 +56,67 @@ async function Questionnaire({ params, searchParams }: Props) {
     : [];
   const earlier = history.slice(1);
 
+  const done = answers.size;
+  const progress = Math.round((done / QUESTIONS.length) * 100);
+
   return (
     <>
-      <Link href={`/stories/${story.id}`} className="text-sm underline">
+      <Link href={`/stories/${story.id}`} className={backLink}>
         ← {story.title}
       </Link>
+
+      <div
+        role="progressbar"
+        aria-label="Questionnaire progress"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progress}
+        className="mt-6 h-1.5 overflow-hidden rounded-full bg-accent-soft"
+      >
+        <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} />
+      </div>
 
       {active ? (
         <form
           // A new key per question gives each question a fresh, empty form.
           key={active.key}
           action={saveAnswerAction.bind(null, story.id, active.key)}
-          className="mt-6 flex flex-col gap-3"
+          className={`${card} mt-6 flex flex-col gap-3`}
         >
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm font-medium text-accent">
             Question {position} of {QUESTIONS.length}
           </p>
-          <label htmlFor="answer" className="text-xl font-semibold">
+          <label htmlFor="answer" className="font-display text-2xl font-semibold text-balance">
             {active.label}
           </label>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {active.hint}
-          </p>
+          <p className={muted}>{active.hint}</p>
           <textarea
             id="answer"
             name="answer"
-            rows={6}
+            rows={7}
             maxLength={4000}
+            autoFocus
             defaultValue={saved?.answerText ?? ""}
-            className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            placeholder="Write as much or as little as you like."
+            className={`${field} leading-relaxed`}
           />
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              name="intent"
-              value="save"
-              className="rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-            >
+          <div className="flex flex-wrap gap-3">
+            <SubmitButton name="intent" value="save" className={buttonPrimary}>
               Save and continue
-            </button>
-            <button
-              type="submit"
-              name="intent"
-              value="skip"
-              className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
-            >
+            </SubmitButton>
+            <SubmitButton name="intent" value="skip" className={buttonSecondary}>
               Skip this question
-            </button>
+            </SubmitButton>
           </div>
 
           {earlier.length > 0 && (
             <details className="mt-2 text-sm">
-              <summary className="cursor-pointer text-zinc-600 dark:text-zinc-400">
+              <summary className="cursor-pointer text-muted hover:text-ink">
                 Earlier answers ({earlier.length})
               </summary>
               <ol className="mt-2 flex flex-col gap-2">
                 {earlier.map((answer) => (
-                  <li
-                    key={answer.id}
-                    className="rounded bg-zinc-100 px-3 py-2 dark:bg-zinc-900"
-                  >
+                  <li key={answer.id} className="rounded-lg bg-paper px-3 py-2">
                     {answer.skipped ? <em>Skipped</em> : answer.answerText}
                   </li>
                 ))}
@@ -109,32 +125,42 @@ async function Questionnaire({ params, searchParams }: Props) {
           )}
         </form>
       ) : (
-        <div className="mt-6">
-          <h1 className="text-xl font-semibold">All questions are done</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            You can still change any answer below.
-          </p>
+        <div className={`${card} mt-6`}>
+          <h1 className="font-display text-2xl font-semibold">All questions are done</h1>
+          <p className={`mt-1 ${muted}`}>You can still change any answer below.</p>
+          <Link href={`/stories/${story.id}`} className={`mt-4 ${buttonPrimary}`}>
+            Back to the story
+          </Link>
         </div>
       )}
 
       <section className="mt-10">
-        <h2 className="text-lg font-medium">Your answers</h2>
-        <ol className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
-          {QUESTIONS.map((question) => {
+        <h2 className={sectionTitle}>Your answers</h2>
+        <ol className="mt-3 flex flex-col gap-2">
+          {QUESTIONS.map((question, index) => {
             const answer = answers.get(question.key);
+            const isActive = question.key === active?.key;
             return (
-              <li key={question.key} className="py-3 text-sm">
+              <li
+                key={question.key}
+                className={`rounded-xl border bg-surface px-4 py-3 text-sm ${
+                  isActive ? "border-accent" : "border-line"
+                }`}
+              >
                 <div className="flex items-start justify-between gap-3">
-                  <span className="font-medium">{question.label}</span>
+                  <span className="flex gap-2 font-medium">
+                    <span aria-hidden className="text-muted">{index + 1}.</span>
+                    {question.label}
+                  </span>
                   <Link
                     href={`/stories/${story.id}/questionnaire?q=${question.key}`}
                     aria-label={`${answer ? "Edit" : "Answer"}: ${question.label}`}
-                    className="shrink-0 underline"
+                    className={`${textLink} shrink-0`}
                   >
                     {answer ? "Edit" : "Answer"}
                   </Link>
                 </div>
-                <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                <p className={`mt-1 pl-5 whitespace-pre-wrap ${answer && !answer.skipped ? "" : "italic"} text-muted`}>
                   {!answer
                     ? "Not answered yet"
                     : answer.skipped

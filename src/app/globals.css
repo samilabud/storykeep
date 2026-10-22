@@ -1,26 +1,45 @@
 @import "tailwindcss";
 
+/* A warm "keepsake" palette: paper, ink and one terracotta accent. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --paper: #faf7f2;
+  --surface: #ffffff;
+  --ink: #1f1b16;
+  --muted: #6b6258;
+  --line: #e7e0d6;
+  --accent: #9a4a2c;
+  --accent-ink: #ffffff;
+  --accent-soft: #f6e9e2;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #15120f;
+    --surface: #1e1a16;
+    --ink: #f2ece4;
+    --muted: #a99e91;
+    --line: #332d27;
+    --accent: #e08a63;
+    --accent-ink: #1a120d;
+    --accent-soft: #2c1f18;
   }
 }
 
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
 }
