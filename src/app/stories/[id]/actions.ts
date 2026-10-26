@@ -8,6 +8,7 @@ import { startEulogyCheckout } from "@/billing/checkout";
 import { saveAnswer } from "@/questionnaire/data";
 import { isQuestionKey } from "@/questionnaire/questions";
 import { runPendingJobsQuietly } from "@/jobs/run";
+import { deleteStoryForUser } from "@/stories/data";
 import { requestDraft } from "@/stories/drafts";
 import { restoreVersion, saveVersion } from "@/stories/versions";
 
@@ -80,6 +81,14 @@ export async function requestDraftAction(storyId: string) {
   // Go to the clean URL. This drops ?checkout=success, which only matters
   // while the page waits for the payment webhook.
   redirect(`/stories/${storyId}`);
+}
+
+export async function deleteStoryAction(storyId: string) {
+  const userId = await requireUser();
+  const deleted = await deleteStoryForUser(userId, storyId);
+  if (!deleted) notFound();
+
+  redirect("/stories");
 }
 
 export async function startEulogyCheckoutAction(storyId: string) {

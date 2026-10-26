@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createStory, getStoryForUser, listStoriesForUser } from "@/stories/data";
+import {
+  createStory,
+  deleteStoryForUser,
+  getStoryForUser,
+  listStoriesForUser,
+} from "@/stories/data";
+import { eq } from "drizzle-orm";
+import { getDb } from "@/db/client";
+import { storyVersions } from "@/db/schema";
+import { saveVersion } from "@/stories/versions";
 import { createTestUser, resetDb } from "../helpers/db";
 
 // The session is the only thing we fake. The database, the queries and the
@@ -52,6 +61,29 @@ describe("per-user access control for stories", () => {
 
     it("treats a malformed id as not found instead of crashing", async () => {
       expect(await getStoryForUser(alice.id, "not-a-uuid")).toBeNull();
+    });
+
+    it("does not let user A delete user B's story", async () => {
+      expect(await deleteStoryForUser(alice.id, bobsStoryId)).toBe(false);
+      expect(await getStoryForUser(bob.id, bobsStoryId)).not.toBeNull();
+    });
+
+    it("lets the owner delete their story, versions included", async () => {
+      await saveVersion(bob.id, bobsStoryId, { source: "user_edit", content: "Once upon a time" });
+
+      expect(await deleteStoryForUser(bob.id, bobsStoryId)).toBe(true);
+      expect(await getStoryForUser(bob.id, bobsStoryId)).toBeNull();
+      const orphans = await getDb()
+        .select()
+        .from(storyVersions)
+        .where(eq(storyVersions.storyId, bobsStoryId));
+      expect(orphans).toEqual([]);
+      // A second delete finds nothing.
+      expect(await deleteStoryForUser(bob.id, bobsStoryId)).toBe(false);
+    });
+
+    it("treats a malformed id as nothing to delete", async () => {
+      expect(await deleteStoryForUser(bob.id, "not-a-uuid")).toBe(false);
     });
   });
 

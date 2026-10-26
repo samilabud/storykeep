@@ -46,6 +46,24 @@ export async function createStory(
   return story;
 }
 
+/**
+ * Deletes the story if this user owns it. Answers and versions go with it
+ * (ON DELETE CASCADE); orders keep their row with story_id set to null.
+ * Returns false when there was nothing of theirs to delete.
+ */
+export async function deleteStoryForUser(
+  userId: string,
+  storyId: string,
+): Promise<boolean> {
+  if (!uuidSchema.safeParse(storyId).success) return false;
+
+  const deleted = await getDb()
+    .delete(stories)
+    .where(and(eq(stories.id, storyId), eq(stories.userId, userId)))
+    .returning({ id: stories.id });
+  return deleted.length > 0;
+}
+
 /** The handle Drizzle gives you inside `db.transaction(...)`. */
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 

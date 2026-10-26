@@ -9,7 +9,9 @@ export const buttonPrimary = `inline-flex items-center justify-center gap-2 roun
 
 export const buttonSecondary = `inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60 ${focus}`;
 
-export const card = "rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6";
+export const buttonDanger = `inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-red-600 dark:hover:bg-red-700 ${focus}`;
+
+export const card ="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6";
 
 export const field =
   "w-full rounded-lg border border-line bg-surface px-3 py-2 text-base text-ink placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30";

@@ -25,12 +25,14 @@ import {
   textLink,
 } from "@/app/ui";
 import {
+  deleteStoryAction,
   requestDraftAction,
   saveStoryTextAction,
   startEulogyCheckoutAction,
 } from "./actions";
 import { StoryAssistant } from "./assistant";
 import { AutoRefresh } from "./auto-refresh";
+import { DeleteStory } from "./delete-story";
 
 const SOURCE_LABEL = { llm_draft: "AI draft", user_edit: "Your edit" } as const;
 
@@ -325,6 +327,20 @@ async function StoryDetail({ params, searchParams }: Props) {
                 ))}
               </ol>
             )}
+          </section>
+
+          <section className={card}>
+            <h2 className={sectionTitle}>Delete this story</h2>
+            <div className="mt-3">
+              <DeleteStory
+                action={deleteStoryAction.bind(null, story.id)}
+                warning={
+                  eulogyPayment === "paid_unused"
+                    ? "You paid for a draft of this eulogy and have not used it yet. Deleting the story gives up that draft."
+                    : undefined
+                }
+              />
+            </div>
           </section>
         </div>
 
